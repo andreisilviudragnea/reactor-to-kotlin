@@ -1,4 +1,4 @@
-package io.dragnea.reactor2kotlin
+package io.dragnea.reactor2kotlin.inspection
 
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemDescriptor
@@ -6,6 +6,11 @@ import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
 import com.intellij.psi.util.parentOfType
+import io.dragnea.reactor2kotlin.extractPublisherReturningCallsToMethods
+import io.dragnea.reactor2kotlin.liftAwait
+import io.dragnea.reactor2kotlin.optimizeCode
+import io.dragnea.reactor2kotlin.returnsMono
+import io.dragnea.reactor2kotlin.wrapInMono
 import org.jetbrains.kotlin.idea.inspections.AbstractKotlinInspection
 import org.jetbrains.kotlin.idea.util.ImportInsertHelperImpl
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
@@ -23,15 +28,14 @@ class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection(
             holder: ProblemsHolder,
             isOnTheFly: Boolean
     ) = namedFunctionVisitor { ktNamedFunction ->
-        if (ktNamedFunction.returnsMono()) {
-            val nameIdentifier = ktNamedFunction.nameIdentifier!!
-            holder.registerProblem(
-                    nameIdentifier,
-                    "Function returns Mono",
-                    ProblemHighlightType.WARNING,
-                    Fix()
-            )
-        }
+        ktNamedFunction.returnsMono() || return@namedFunctionVisitor
+
+        holder.registerProblem(
+            ktNamedFunction.nameIdentifier!!,
+            "Function returns Mono",
+            ProblemHighlightType.WARNING,
+            Fix()
+        )
     }
 
     class Fix : LocalQuickFix {
@@ -49,7 +53,9 @@ class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection(
 
                     extractPublisherReturningCallsToMethods()
 
-                    wrapIntoMonoCoroutineBuilder()
+//                    wrapIntoMonoCoroutineBuilder()
+
+                    wrapInMono()
                 }
 
                 runWriteAction {

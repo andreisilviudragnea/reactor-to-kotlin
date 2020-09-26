@@ -1,18 +1,18 @@
 plugins {
-    id("org.jetbrains.intellij") version "0.4.21"
+    id("org.jetbrains.intellij") version "0.6.5"
     java
-    kotlin("jvm") version "1.4.0"
+    kotlin("jvm") version "1.4.21"
 }
 
 group = "io.dragnea"
 version = "0.1"
 
 intellij {
-    version = "IU-LATEST-EAP-SNAPSHOT"
+    version = "IC-2020.3.2"
 
     setPlugins(
             "java",
-            "org.jetbrains.kotlin:1.4.0-release-IJ2020.2-1"
+            "org.jetbrains.kotlin:203-1.4.21-release-IJ5981.133"
     )
 
     updateSinceUntilBuild = false

@@ -6,7 +6,7 @@ import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.VariableDescriptor
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToCall
 import org.jetbrains.kotlin.idea.core.NewDeclarationNameValidator
-import org.jetbrains.kotlin.idea.refactoring.inline.KotlinInlineValHandler
+import org.jetbrains.kotlin.idea.refactoring.inline.KotlinInlinePropertyHandler
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -54,6 +54,6 @@ fun KtNamedFunction.inlineExactCopiesOfVariables() = process<KtNamedFunction, Kt
         return@process false
     }
 
-    KotlinInlineValHandler(withPrompt = false).inlineElement(project, null, it)
+    KotlinInlinePropertyHandler(withPrompt = false).inlineElement(project, null, it)
     true
 }

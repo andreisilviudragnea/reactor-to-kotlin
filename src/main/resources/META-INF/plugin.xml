@@ -27,7 +27,7 @@
     -->
 
     <extensions defaultExtensionNs="com.intellij">
-        <localInspection implementationClass="io.dragnea.reactor2kotlin.ExtractMonoReturningCallsToVariablesInspection"
+        <localInspection implementationClass="io.dragnea.reactor2kotlin.inspection.ExtractMonoReturningCallsToVariablesInspection"
                          displayName="Mono-returning method"
                          groupPath="Kotlin"
                          groupName="Redundant constructs"
@@ -35,7 +35,15 @@
                          level="WARNING"
                          language="kotlin"
         />
-        <localInspection implementationClass="io.dragnea.reactor2kotlin.MonoThenInspection"
+        <localInspection implementationClass="io.dragnea.reactor2kotlin.inspection.InlineRunCallWithoutReturnsInspection"
+                         displayName="Inline run call without returns"
+                         groupPath="Kotlin"
+                         groupName="Redundant constructs"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         language="kotlin"
+        />
+        <localInspection implementationClass="io.dragnea.reactor2kotlin.inspection.MonoThenInspection"
                          displayName="Mono then"
                          groupPath="Java,Java language level migration aids"
                          groupName="Something"
@@ -43,7 +51,7 @@
                          level="WARNING"
                          language="JAVA"
         />
-        <localInspection implementationClass="io.dragnea.reactor2kotlin.MonoThenJustInspection"
+        <localInspection implementationClass="io.dragnea.reactor2kotlin.inspection.MonoThenJustInspection"
                          displayName="Mono then just"
                          groupPath="Java,Java language level migration aids"
                          groupName="Something"

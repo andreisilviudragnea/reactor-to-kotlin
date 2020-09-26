@@ -1,5 +1,7 @@
 package io.dragnea.reactor2kotlin
 
+import com.intellij.psi.PsiElement
+import com.intellij.psi.util.collectDescendantsOfType
 import com.intellij.psi.util.parentOfType
 import com.intellij.refactoring.rename.NameSuggestionProvider
 import com.intellij.refactoring.rename.RenameProcessor
@@ -13,10 +15,11 @@ import org.jetbrains.kotlin.idea.core.NewDeclarationNameValidator
 import org.jetbrains.kotlin.idea.core.dropEnclosingParenthesesIfPossible
 import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.findUsages.ReferencesSearchScopeHelper
-import org.jetbrains.kotlin.idea.refactoring.inline.KotlinInlineValHandler
+import org.jetbrains.kotlin.idea.refactoring.inline.KotlinInlinePropertyHandler
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtBlockExpression
+import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFunctionLiteral
@@ -28,22 +31,89 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtReturnExpression
 import org.jetbrains.kotlin.psi.createExpressionByPattern
-import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
+import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 
 fun KtNamedFunction.optimizeCode() {
+    // TODO: Process run blocks before returns
+    removeRunsWithoutReturns()
+
     fixUselessElvisOperator()
 
     inlineExactCopiesOfVariables()
 
     processLetBlocksBeforeReturns()
 
-    // TODO: Process run blocks before returns
-
     makeNullableLetReturnEarly()
 
 //    inlineValuesWithOneUsage()
+}
+
+fun KtCallExpression.isRunWithoutReturns(): Boolean {
+    isRunCall() || return false
+
+    val functionLiteral = this
+        .lambdaArguments[0]
+        .getLambdaExpression()!!
+        .functionLiteral
+
+    !functionLiteral.hasReturns() || return false
+
+    return true
+}
+
+val KtCallExpression.statementsFromFirstLambdaArgument: List<KtExpression>
+    get() = this
+        .lambdaArguments[0]
+        .getLambdaExpression()!!
+        .functionLiteral
+        .bodyExpression!!
+        .statements
+
+fun KtNamedFunction.removeRunsWithoutReturns() = process<KtNamedFunction, KtCallExpression> {
+    it.isRunWithoutReturns() || return@process false
+
+    val ktBlockExpression = runWriteAction { it.inlineRunWithoutReturns() } ?: return@process false
+
+    ktBlockExpression.renameAllRedeclarations()
+}
+
+fun KtCallExpression.inlineRunWithoutReturns(): KtBlockExpression? {
+    when (val parent = parent) {
+        is KtProperty -> {
+            parent.initializer == this || return null
+
+            val ktBlockExpression = parent.parentOfType<KtBlockExpression>()!!
+
+            val statements = statementsFromFirstLambdaArgument
+
+            if (statements.size >= 2) {
+                ktBlockExpression.addRangeBefore(statements.first(), statements[statements.size - 2], parent)
+            }
+
+            ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), parent)
+
+            ktBlockExpression.addBefore(
+                ktPsiFactory.createProperty("val ${parent.name} = ${statements.last().text}"),
+                parent
+            )
+
+            parent.delete()
+
+            return ktBlockExpression
+        }
+        is KtBlockExpression -> {
+            val statements = statementsFromFirstLambdaArgument
+
+            parent.addRangeBefore(statements.first(), statements.last(), this)
+
+            delete()
+
+            return parent
+        }
+        else -> return null
+    }
 }
 
 /**
@@ -72,7 +142,18 @@ private fun KtExpression.getReturnExpressionWhichReturnsThis(): KtReturnExpressi
     return if (ktReturnExpression.returnedExpression == this) ktReturnExpression else null
 }
 
-private fun KtNamedDeclaration.rename(newName: String) = RenameProcessor(project, this, newName, false, false).run()
+fun KtNamedDeclaration.rename(newName: String) = RenameProcessor(project, this, newName, false, false).run()
+
+fun PsiElement.suggestNames(): Set<String> {
+    val names = mutableSetOf<String>()
+
+    NameSuggestionProvider
+        .EP_NAME
+        .findExtensionOrFail(KotlinNameSuggestionProvider::class.java)
+        .getSuggestedNames(this, this, names)
+
+    return names
+}
 
 // TODO: Also rename local variables if they shadow names
 private fun KtFunctionLiteral.renameIfItShadowsName(ktParameter: KtParameter): Boolean {
@@ -81,11 +162,7 @@ private fun KtFunctionLiteral.renameIfItShadowsName(ktParameter: KtParameter): B
             .forElement(ktParameter)
             .firstOrNull { it.factory == Errors.NAME_SHADOWING } ?: return false
 
-    val names = mutableSetOf<String>()
-    NameSuggestionProvider
-            .EP_NAME
-            .findExtensionOrFail(KotlinNameSuggestionProvider::class.java)
-            .getSuggestedNames(ktParameter, ktParameter, names)
+    val names = ktParameter.suggestNames()
 
     ktParameter.rename(names.first())
 
@@ -152,7 +229,7 @@ private fun KtNamedFunction.processLetBlocksBeforeReturns() = processNameReferen
     }
 }
 
-private fun KtFunctionLiteral.hasReturns(): Boolean {
+fun KtFunctionLiteral.hasReturns(): Boolean {
     var hasReturns = false
 
     processReturnExpressions {
@@ -243,6 +320,44 @@ private fun KtNamedFunction.makeNullableLetReturnEarly() = processNameReferenceE
 
 private fun KtNamedFunction.inlineValuesWithOneUsage() = collectDescendantsOfType<KtProperty>().forEach {
     if (ReferencesSearchScopeHelper.search(it).findAll().size == 1) {
-        KotlinInlineValHandler(withPrompt = false).inlineElement(project, null, it)
+        KotlinInlinePropertyHandler(withPrompt = false).inlineElement(project, null, it)
     }
+}
+
+fun KtBlockExpression.renameAllRedeclarations(): Boolean {
+    var done = renameFirstRedeclaration()
+    var atLeastOnce = done
+
+    while (done) {
+        done = renameFirstRedeclaration()
+        atLeastOnce = atLeastOnce || done
+    }
+
+    return atLeastOnce
+}
+
+fun KtBlockExpression.renameFirstRedeclaration(): Boolean {
+    val ktProperties = collectDescendantsOfType<KtProperty>()
+
+    val diagnostics = analyze().diagnostics
+
+    ktProperties.forEach {
+        if (it.renameIfRedeclaration(diagnostics)) {
+            return true
+        }
+    }
+
+    return false
+}
+
+fun KtProperty.renameIfRedeclaration(diagnostics: Diagnostics): Boolean {
+    diagnostics
+        .forElement(this)
+        .firstOrNull { it.factory == Errors.REDECLARATION } ?: return false
+
+    val names = suggestNames()
+
+    rename(names.first())
+
+    return true
 }

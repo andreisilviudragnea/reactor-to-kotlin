@@ -3,7 +3,9 @@ package io.dragnea.reactor2kotlin
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.parentOfType
 import com.intellij.util.castSafelyTo
+import org.jetbrains.kotlin.idea.core.ShortenReferences
 import org.jetbrains.kotlin.idea.core.copied
+import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.nj2k.postProcessing.resolve
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtBlockExpression
@@ -27,7 +29,58 @@ import org.jetbrains.kotlin.psi.createExpressionByPattern
 import org.jetbrains.kotlin.psi.psiUtil.referenceExpression
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 
+fun KtNamedFunction.wrapInMono() = processNameReferenceExpressions here@{
+    it.getAwaitFirstOrNullCallIsReceiverOf() == null || return@here false
+
+    val ktProperty = it.resolve().castSafelyTo<KtProperty>() ?: return@here false
+
+    ktProperty.hasMonoInitializer() || return@here false
+
+    KtPsiFactory(this).run {
+        val initializer = ktProperty.initializer!!
+
+        val monoExpression = createExpression("kotlinx.coroutines.reactor.mono { ${initializer.text}.awaitFirstOrNull() }")
+
+        val replacedMonoExpression = initializer.replaced(monoExpression)
+
+        replacedMonoExpression
+                .cast<KtDotQualifiedExpression>()
+                .selectorExpression
+                .cast<KtCallExpression>()
+                .lambdaArguments
+                .single()
+                .getLambdaExpression()!!
+                .bodyExpression!!
+                .firstStatement
+                .cast<KtDotQualifiedExpression>()
+                .receiverExpression
+                .introduceVariable()
+
+        ShortenReferences.DEFAULT.process(replacedMonoExpression)
+    }
+
+    return@here true
+}
+
+fun KtProperty.hasMonoInitializer() = hasMonoMapInitializer()
+        || hasMonoFlatMapInitializer()
+        || hasMonoFilterInitializer()
+        || hasMonoFilterWhenInitializer()
+        || hasMonoSwitchIfEmptyInitializer()
+        || hasMonoZip2Initializer()
+        || hasMonoZip3Initializer()
+        || hasMonoThenReturnInitializer()
+        || hasMonoThenInitializer()
+        || hasMonoJustInitializer()
+        || hasMonoJustOrEmptyInitializer()
+        || hasMonoEmptyInitializer()
+        || hasMonoDeferInitializer()
+        || hasMonoOnErrorReturnInitializer()
+        || hasMonoOnErrorReturn1Initializer()
+
 fun KtNamedFunction.liftAwait() = processNameReferenceExpressions here@{
+    it.liftAwaitMonoBuilder() && return@here true
+
     it.liftAwaitElvisOperator() && return@here true
 
     it.liftAwaitLetBlock() && return@here true
@@ -182,6 +235,39 @@ private fun KtNameReferenceExpression.liftAwaitOperator(
     return true
 }
 
+private fun KtProperty.hasMonoBuilderInitializer(): Boolean {
+    val ktCallExpression = initializer.castSafelyTo<KtCallExpression>() ?: return false
+
+    val ktNamedFunction = ktCallExpression
+            .referenceExpression()!!
+            .resolve()
+            .castSafelyTo<KtNamedFunction>() ?: return false
+
+    ktNamedFunction.name == "mono" || return false
+
+    ktCallExpression.lambdaArguments.size == 1 || return false
+
+    return true
+}
+
+private fun KtNameReferenceExpression.liftAwaitMonoBuilder(): Boolean {
+    getAwaitFirstOrNullCall() ?: return false
+
+    val ktProperty = resolve().castSafelyTo<KtProperty>() ?: return false
+
+    if (!ktProperty.hasMonoBuilderInitializer()) return false
+
+    val ktCallExpression = ktProperty.initializer.cast<KtCallExpression>()
+
+    parent
+        .cast<KtQualifiedExpression>()
+        .replace(ktPsiFactory.createExpression("run ${ktCallExpression.lambdaArguments[0].text}"))
+
+    ktProperty.delete()
+
+    return true
+}
+
 private fun KtProperty.hasElvisInitializer(): Boolean {
     val ktBinaryExpression = initializer.castSafelyTo<KtBinaryExpression>() ?: return false
 
@@ -212,10 +298,12 @@ private fun KtProperty.hasLetInitializer(): Boolean {
     return ktQualifiedExpression.selectorExpression!!.isCallTo("let")
 }
 
+fun KtCallExpression.isRunCall() = calleeExpression!!.isCallTo("run")
+
 private fun KtProperty.hasRunInitializer(): Boolean {
     val ktCallExpression = initializer.castSafelyTo<KtCallExpression>() ?: return false
 
-    return ktCallExpression.calleeExpression!!.isCallTo("run")
+    return ktCallExpression.isRunCall()
 }
 
 private fun KtExpression.isCallTo(name: String): Boolean {

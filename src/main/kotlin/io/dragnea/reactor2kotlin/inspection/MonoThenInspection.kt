@@ -1,4 +1,4 @@
-package io.dragnea.reactor2kotlin
+package io.dragnea.reactor2kotlin.inspection
 
 import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool
 import com.intellij.codeInspection.LocalQuickFix
@@ -8,19 +8,20 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiElementVisitor
+import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.util.parentOfType
+import io.dragnea.reactor2kotlin.elementFactory
+import io.dragnea.reactor2kotlin.getNotDeferredArgument
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 
-// TODO: Fix signature clash with Flux.then()
-class MonoThenJustInspection : AbstractBaseJavaLocalInspectionTool() {
+class MonoThenInspection : AbstractBaseJavaLocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         return object : JavaElementVisitor() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
-                val psiElement = expression.getThenJustArgument() ?: return
+                val psiElement = expression.getNotDeferredArgument() ?: return
                 holder.registerProblem(
                         psiElement,
-                        "Mono then just",
+                        "Mono then",
                         ProblemHighlightType.WARNING,
                         Fix()
                 )
@@ -29,17 +30,17 @@ class MonoThenJustInspection : AbstractBaseJavaLocalInspectionTool() {
     }
 
     class Fix : LocalQuickFix {
-        override fun getFamilyName() = "Mono then just"
+        override fun getFamilyName() = "Mono then"
 
         override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
-            val callToJust = descriptor.psiElement.cast<PsiMethodCallExpression>()
-            val callToThen = callToJust.parentOfType<PsiMethodCallExpression>()!!
-            callToThen.replace(callToJust
-                    .elementFactory
-                    .createExpressionFromText(
-                            "${callToThen.methodExpression.qualifierExpression!!.text}.thenReturn(${callToJust.firstArgument.text})",
-                            callToJust
-                    ))
+            val psiExpression = descriptor.psiElement.cast<PsiExpression>()
+
+            val createExpressionFromText = psiExpression.elementFactory.createExpressionFromText(
+                    "reactor.core.publisher.Mono.defer(() -> ${psiExpression.text})",
+                    psiExpression
+            )
+
+            psiExpression.replace(createExpressionFromText)
         }
     }
 }
