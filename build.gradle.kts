@@ -1,7 +1,7 @@
 plugins {
     id("org.jetbrains.intellij") version "0.6.5"
     java
-    kotlin("jvm") version "1.4.21"
+    kotlin("jvm") version "1.4.30"
 }
 
 group = "io.dragnea"
@@ -12,7 +12,7 @@ intellij {
 
     setPlugins(
             "java",
-            "org.jetbrains.kotlin:203-1.4.21-release-IJ5981.133"
+            "org.jetbrains.kotlin:203-1.4.30-release-IJ7148.5"
     )
 
     updateSinceUntilBuild = false
