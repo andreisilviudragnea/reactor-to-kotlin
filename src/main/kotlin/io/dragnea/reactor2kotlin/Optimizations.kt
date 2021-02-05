@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.idea.core.NewDeclarationNameValidator
 import org.jetbrains.kotlin.idea.core.dropEnclosingParenthesesIfPossible
 import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.findUsages.ReferencesSearchScopeHelper
+import org.jetbrains.kotlin.idea.inspections.UseExpressionBodyInspection
 import org.jetbrains.kotlin.idea.refactoring.inline.KotlinInlinePropertyHandler
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.psi.KtBinaryExpression
@@ -47,7 +48,14 @@ fun KtNamedFunction.optimizeCode() {
 
     makeNullableLetReturnEarly()
 
-//    inlineValuesWithOneUsage()
+    inlineValuesWithOneUsage()
+
+    runWriteAction {
+        val useExpressionBodyInspection = UseExpressionBodyInspection()
+        if (useExpressionBodyInspection.isActiveFor(this)) {
+            useExpressionBodyInspection.simplify(this, false)
+        }
+    }
 }
 
 fun KtCallExpression.isRunWithoutReturns(): Boolean {

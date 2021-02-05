@@ -5,6 +5,7 @@ import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.util.parentOfType
 import io.dragnea.reactor2kotlin.extractPublisherReturningCallsToMethods
 import io.dragnea.reactor2kotlin.liftAwait
@@ -64,6 +65,8 @@ class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection(
 
                 optimizeCode()
             }
+
+            PsiDocumentManager.getInstance(project).commitAllDocuments()
         }
     }
 }

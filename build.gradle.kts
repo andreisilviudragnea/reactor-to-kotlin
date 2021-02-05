@@ -8,11 +8,11 @@ group = "io.dragnea"
 version = "0.1"
 
 intellij {
-    version = "IC-2020.3.2"
+    version = "IC-LATEST-EAP-SNAPSHOT"
 
     setPlugins(
             "java",
-            "org.jetbrains.kotlin:203-1.4.30-release-IJ7148.5"
+            "org.jetbrains.kotlin:211-1.4.21-release-IJ5538.2"
     )
 
     updateSinceUntilBuild = false
