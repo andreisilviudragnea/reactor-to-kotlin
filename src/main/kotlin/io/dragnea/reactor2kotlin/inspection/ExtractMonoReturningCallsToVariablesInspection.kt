@@ -54,8 +54,6 @@ class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection(
 
                     extractPublisherReturningCallsToMethods()
 
-//                    wrapIntoMonoCoroutineBuilder()
-
                     wrapInMono()
                 }
 

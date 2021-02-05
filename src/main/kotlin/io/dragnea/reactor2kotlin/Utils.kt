@@ -12,8 +12,6 @@ import com.intellij.psi.PsiReferenceExpression
 import com.intellij.util.castSafelyTo
 import org.jetbrains.kotlin.asJava.toLightMethods
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
-import org.jetbrains.kotlin.idea.core.ShortenReferences
-import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.refactoring.addTypeArgumentsIfNeeded
 import org.jetbrains.kotlin.idea.refactoring.fqName.fqName
 import org.jetbrains.kotlin.idea.refactoring.getQualifiedTypeArgumentList
@@ -37,7 +35,6 @@ import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.KtPsiUtil
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtReturnExpression
-import org.jetbrains.kotlin.psi.createExpressionByPattern
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import org.jetbrains.kotlin.resolve.bindingContextUtil.getTargetFunction
 import org.jetbrains.kotlin.utils.addToStdlib.cast
@@ -85,37 +82,6 @@ private fun KtNamedFunction.collectCallExpressions(): List<KtExpression> {
 
 val PsiElement.elementFactory: PsiElementFactory get() = JavaPsiFacade.getElementFactory(project)
 val PsiElement.ktPsiFactory: KtPsiFactory get() = KtPsiFactory(this)
-
-fun KtNamedFunction.wrapIntoMonoCoroutineBuilder() {
-  val ktNamedFunction = this
-  KtPsiFactory(ktNamedFunction).run {
-    val monoExpression = createExpression("kotlinx.coroutines.reactor.mono {}")
-
-    val callExpression = monoExpression
-        .cast<KtDotQualifiedExpression>()
-        .selectorExpression
-        .cast<KtCallExpression>()
-
-    callExpression
-        .lambdaArguments
-        .single()
-        .delete()
-
-    val bodyBlockExpression = bodyBlockExpression!!
-
-    ktNamedFunction.processReturnExpressions {
-      it.replace(createExpressionByPattern("return@mono $0.awaitFirstOrNull()", it.returnedExpression!!))
-    }
-
-    val dummyCall = createExpressionByPattern("foo()$0:'{}'", bodyBlockExpression) as KtCallExpression
-    val functionLiteralArgument = dummyCall.lambdaArguments.single()
-    callExpression.add(functionLiteralArgument)
-
-    addBefore(createEQ(), bodyBlockExpression)
-
-    ShortenReferences.DEFAULT.process(bodyBlockExpression.replaced(monoExpression))
-  }
-}
 
 val PsiMethodCallExpression.firstArgument: PsiExpression get() = argumentList.expressions[0]
 
