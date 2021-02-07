@@ -8,7 +8,7 @@ group = "io.dragnea"
 version = "0.1"
 
 intellij {
-    version = "IC-LATEST-EAP-SNAPSHOT"
+    version = "IU-LATEST-EAP-SNAPSHOT"
 
     setPlugins(
             "java",
