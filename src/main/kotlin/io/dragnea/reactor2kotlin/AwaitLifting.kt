@@ -306,15 +306,6 @@ private fun KtProperty.hasRunInitializer(): Boolean {
     return ktCallExpression.isRunCall()
 }
 
-private fun KtExpression.isCallTo(name: String): Boolean {
-    val ktNamedFunction = this
-            .referenceExpression()!!
-            .resolve()
-            .castSafelyTo<KtNamedFunction>() ?: return false
-
-    return ktNamedFunction.name == name
-}
-
 private fun KtNameReferenceExpression.liftAwaitLetBlock() = liftAwait(KtProperty::hasLetInitializer) {
     ktProperty.ktFunctionLiteral().process()
 }

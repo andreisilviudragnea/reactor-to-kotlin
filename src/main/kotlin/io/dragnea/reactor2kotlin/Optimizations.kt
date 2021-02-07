@@ -327,9 +327,15 @@ private fun KtNamedFunction.makeNullableLetReturnEarly() = processNameReferenceE
 }
 
 private fun KtNamedFunction.inlineValuesWithOneUsage() = collectDescendantsOfType<KtProperty>().forEach {
-    if (ReferencesSearchScopeHelper.search(it).findAll().size == 1) {
+    if (ReferencesSearchScopeHelper.search(it).findAll().size == 1 && !it.hasAsyncInitializer()) {
         KotlinInlinePropertyHandler(withPrompt = false).inlineElement(project, null, it)
     }
+}
+
+fun KtProperty.hasAsyncInitializer(): Boolean {
+    val ktCallExpression = initializer.castSafelyTo<KtCallExpression>() ?: return false
+
+    return ktCallExpression.calleeExpression!!.isCallTo("async")
 }
 
 fun KtBlockExpression.renameAllRedeclarations(): Boolean {

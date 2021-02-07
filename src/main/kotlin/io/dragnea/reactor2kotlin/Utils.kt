@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.idea.refactoring.getQualifiedTypeArgumentList
 import org.jetbrains.kotlin.idea.refactoring.introduce.introduceVariable.KotlinIntroduceVariableHandler
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.lexer.KtTokens
+import org.jetbrains.kotlin.nj2k.postProcessing.resolve
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -36,6 +37,7 @@ import org.jetbrains.kotlin.psi.KtPsiUtil
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtReturnExpression
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+import org.jetbrains.kotlin.psi.psiUtil.referenceExpression
 import org.jetbrains.kotlin.resolve.bindingContextUtil.getTargetFunction
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
@@ -232,3 +234,12 @@ fun KtNameReferenceExpression.getAwaitFirstOrNullCallIsReceiverOf(): KtQualified
 fun KtBinaryExpression.isElvis() = operationToken == KtTokens.ELVIS
 
 fun KtFunctionLiteral.firstParameter(): KtParameter = valueParameters[0]
+
+fun KtExpression.isCallTo(name: String): Boolean {
+    val ktNamedFunction = this
+        .referenceExpression()!!
+        .resolve()
+        .castSafelyTo<KtNamedFunction>() ?: return false
+
+    return ktNamedFunction.name == name
+}
