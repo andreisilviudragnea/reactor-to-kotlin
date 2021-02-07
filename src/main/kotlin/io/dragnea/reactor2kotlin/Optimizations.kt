@@ -8,7 +8,7 @@ import com.intellij.refactoring.rename.RenameProcessor
 import com.intellij.util.castSafelyTo
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
-import org.jetbrains.kotlin.idea.caches.resolve.analyzeWithAllCompilerChecks
+import org.jetbrains.kotlin.idea.caches.resolve.analyzeAndGetResult
 import org.jetbrains.kotlin.idea.core.KotlinNameSuggester
 import org.jetbrains.kotlin.idea.core.KotlinNameSuggestionProvider
 import org.jetbrains.kotlin.idea.core.NewDeclarationNameValidator
@@ -128,7 +128,7 @@ fun KtCallExpression.inlineRunWithoutReturns(): KtBlockExpression? {
  * See [org.jetbrains.kotlin.idea.quickfix.RemoveUselessElvisFix]
  */
 private fun KtNamedFunction.fixUselessElvisOperator() = process<KtNamedFunction, KtBinaryExpression> { ktBinaryExpression ->
-    analyzeWithAllCompilerChecks()
+    analyzeAndGetResult()
             .bindingContext
             .diagnostics
             .forElement(ktBinaryExpression)
