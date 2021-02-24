@@ -76,19 +76,19 @@ fun KtProperty.hasMonoOnErrorReturn1Initializer(): Boolean {
 }
 
 private fun KtProperty.hasMonoInitializerWithSignature(signature: String) =
-        hasInitializerWithSignature("reactor.core.publisher.Mono", signature)
+    hasInitializerWithSignature("reactor.core.publisher.Mono", signature)
 
 private fun KtProperty.hasInitializerWithSignature(className: String, signature: String): Boolean {
     val initializer = initializer.castSafelyTo<KtDotQualifiedExpression>() ?: return false
 
     val ktCallExpression = initializer
-            .selectorExpression
-            .castSafelyTo<KtCallExpression>() ?: return false
+        .selectorExpression
+        .castSafelyTo<KtCallExpression>() ?: return false
 
     val method = ktCallExpression
-            .referenceExpression()!!
-            .resolve()
-            .castSafelyTo<PsiMethod>() ?: return false
+        .referenceExpression()!!
+        .resolve()
+        .castSafelyTo<PsiMethod>() ?: return false
 
     if (method.containingClass!!.qualifiedName != className) {
         return false
@@ -103,8 +103,8 @@ private fun KtProperty.hasInitializerWithSignature(className: String, signature:
 
 fun PsiMethod.hasEqualSignatureTo(signature: String): Boolean {
     return MethodSignatureUtil.areSignaturesEqual(
-            getSignature(PsiSubstitutor.EMPTY),
-            elementFactory.createMethodFromText(signature, this).getSignature(PsiSubstitutor.EMPTY)
+        getSignature(PsiSubstitutor.EMPTY),
+        elementFactory.createMethodFromText(signature, this).getSignature(PsiSubstitutor.EMPTY)
     )
 }
 

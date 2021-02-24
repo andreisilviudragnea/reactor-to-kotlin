@@ -20,10 +20,10 @@ class MonoThenInspection : AbstractBaseJavaLocalInspectionTool() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
                 val psiElement = expression.getNotDeferredArgument() ?: return
                 holder.registerProblem(
-                        psiElement,
-                        "Mono then",
-                        ProblemHighlightType.WARNING,
-                        Fix()
+                    psiElement,
+                    "Mono then",
+                    ProblemHighlightType.WARNING,
+                    Fix()
                 )
             }
         }
@@ -36,8 +36,8 @@ class MonoThenInspection : AbstractBaseJavaLocalInspectionTool() {
             val psiExpression = descriptor.psiElement.cast<PsiExpression>()
 
             val createExpressionFromText = psiExpression.elementFactory.createExpressionFromText(
-                    "reactor.core.publisher.Mono.defer(() -> ${psiExpression.text})",
-                    psiExpression
+                "reactor.core.publisher.Mono.defer(() -> ${psiExpression.text})",
+                psiExpression
             )
 
             psiExpression.replace(createExpressionFromText)

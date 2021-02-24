@@ -15,7 +15,7 @@ import org.jetbrains.kotlin.idea.util.application.runWriteAction
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.callExpressionVisitor
 
-class InlineRunCallWithoutReturnsInspection: AbstractKotlinInspection() {
+class InlineRunCallWithoutReturnsInspection : AbstractKotlinInspection() {
 
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor = callExpressionVisitor {
         it.isRunWithoutReturns() || return@callExpressionVisitor

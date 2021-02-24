@@ -22,10 +22,10 @@ class MonoThenJustInspection : AbstractBaseJavaLocalInspectionTool() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
                 val psiElement = expression.getThenJustArgument() ?: return
                 holder.registerProblem(
-                        psiElement,
-                        "Mono then just",
-                        ProblemHighlightType.WARNING,
-                        Fix()
+                    psiElement,
+                    "Mono then just",
+                    ProblemHighlightType.WARNING,
+                    Fix()
                 )
             }
         }
@@ -37,12 +37,14 @@ class MonoThenJustInspection : AbstractBaseJavaLocalInspectionTool() {
         override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
             val callToJust = descriptor.psiElement.cast<PsiMethodCallExpression>()
             val callToThen = callToJust.parentOfType<PsiMethodCallExpression>()!!
-            callToThen.replace(callToJust
+            callToThen.replace(
+                callToJust
                     .elementFactory
                     .createExpressionFromText(
-                            "${callToThen.methodExpression.qualifierExpression!!.text}.thenReturn(${callToJust.firstArgument.text})",
-                            callToJust
-                    ))
+                        "${callToThen.methodExpression.qualifierExpression!!.text}.thenReturn(${callToJust.firstArgument.text})",
+                        callToJust
+                    )
+            )
         }
     }
 }

@@ -24,7 +24,8 @@ private fun KtProperty.isExactCopy(): Boolean {
     val initializer = initializer ?: return false
 
     if (!isVar && initializer is KtNameReferenceExpression && typeReference == null) {
-        val initializerDescriptor = initializer.resolveToCall(BodyResolveMode.FULL)?.resultingDescriptor as? VariableDescriptor
+        val initializerDescriptor =
+            initializer.resolveToCall(BodyResolveMode.FULL)?.resultingDescriptor as? VariableDescriptor
                 ?: return false
         if (initializerDescriptor.isVar) return false
         if (initializerDescriptor.containingDeclaration !is FunctionDescriptor) return false
@@ -35,12 +36,12 @@ private fun KtProperty.isExactCopy(): Boolean {
         val containingDeclaration = getStrictParentOfType<KtDeclaration>()
         if (containingDeclaration != null) {
             val validator = NewDeclarationNameValidator(
-                    container = containingDeclaration,
-                    anchor = this,
-                    target = NewDeclarationNameValidator.Target.VARIABLES,
-                    excludedDeclarations = listOfNotNull(
-                            DescriptorToSourceUtils.descriptorToDeclaration(initializerDescriptor) as? KtDeclaration
-                    )
+                container = containingDeclaration,
+                anchor = this,
+                target = NewDeclarationNameValidator.Target.VARIABLES,
+                excludedDeclarations = listOfNotNull(
+                    DescriptorToSourceUtils.descriptorToDeclaration(initializerDescriptor) as? KtDeclaration
+                )
             )
             if (!validator(copyName)) return false
         }

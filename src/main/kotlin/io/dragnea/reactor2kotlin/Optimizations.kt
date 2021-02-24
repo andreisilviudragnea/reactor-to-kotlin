@@ -127,23 +127,24 @@ fun KtCallExpression.inlineRunWithoutReturns(): KtBlockExpression? {
 /**
  * See [org.jetbrains.kotlin.idea.quickfix.RemoveUselessElvisFix]
  */
-private fun KtNamedFunction.fixUselessElvisOperator() = process<KtNamedFunction, KtBinaryExpression> { ktBinaryExpression ->
-    analyzeAndGetResult()
+private fun KtNamedFunction.fixUselessElvisOperator() =
+    process<KtNamedFunction, KtBinaryExpression> { ktBinaryExpression ->
+        analyzeAndGetResult()
             .bindingContext
             .diagnostics
             .forElement(ktBinaryExpression)
             .firstOrNull {
                 it.factory in listOf(
-                        // TODO: This might not be needed
-                        Errors.USELESS_ELVIS,
-                        Errors.USELESS_ELVIS_RIGHT_IS_NULL
+                    // TODO: This might not be needed
+                    Errors.USELESS_ELVIS,
+                    Errors.USELESS_ELVIS_RIGHT_IS_NULL
                 )
             }
             ?: return@process false
 
-    runWriteAction { dropEnclosingParenthesesIfPossible(ktBinaryExpression.replaced(ktBinaryExpression.left!!)) }
-    true
-}
+        runWriteAction { dropEnclosingParenthesesIfPossible(ktBinaryExpression.replaced(ktBinaryExpression.left!!)) }
+        true
+    }
 
 private fun KtExpression.getReturnExpressionWhichReturnsThis(): KtReturnExpression? {
     val ktReturnExpression = parent.castSafelyTo<KtReturnExpression>() ?: return null
@@ -166,9 +167,9 @@ fun PsiElement.suggestNames(): Set<String> {
 // TODO: Also rename local variables if they shadow names
 private fun KtFunctionLiteral.renameIfItShadowsName(ktParameter: KtParameter): Boolean {
     analyze()
-            .diagnostics
-            .forElement(ktParameter)
-            .firstOrNull { it.factory == Errors.NAME_SHADOWING } ?: return false
+        .diagnostics
+        .forElement(ktParameter)
+        .firstOrNull { it.factory == Errors.NAME_SHADOWING } ?: return false
 
     val names = ktParameter.suggestNames()
 
@@ -197,19 +198,21 @@ private fun KtNamedFunction.processLetBlocksBeforeReturns() = processNameReferen
         val ktBlockExpression: KtBlockExpression = ktReturnExpression.parentOfType()!!
 
         val letReceiverKtProperty = ktPsiFactory
-                .createExpressionByPattern(
-                        "$0 ?: return${ktReturnExpression.labelString()} null",
-                        nullableLetCall.receiverExpression
-                )
-                .introduceVariableInBlock(ktBlockExpression, ktReturnExpression)
+            .createExpressionByPattern(
+                "$0 ?: return${ktReturnExpression.labelString()} null",
+                nullableLetCall.receiverExpression
+            )
+            .introduceVariableInBlock(ktBlockExpression, ktReturnExpression)
 
         ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), ktReturnExpression)
 
         ktFunctionLiteral.processReturnExpressions {
-            it.replace(ktPsiFactory.createExpressionByPattern(
+            it.replace(
+                ktPsiFactory.createExpressionByPattern(
                     "return${ktReturnExpression.labelString()} $0",
                     it.returnedExpression!!
-            ))
+                )
+            )
         }
 
         val destructuringDeclaration = ktFunctionLiteral.valueParameters[0].destructuringDeclaration
@@ -218,14 +221,14 @@ private fun KtNamedFunction.processLetBlocksBeforeReturns() = processNameReferen
             letReceiverKtProperty.identifyingElement!!.replace(ktPsiFactory.createIdentifier(ktParameter.name!!))
         } else {
             ktPsiFactory
-                    .createDestructuringDeclaration("val ${destructuringDeclaration.text} = ${letReceiverKtProperty.name}")
-                    .addToBlock(ktBlockExpression, ktReturnExpression)
+                .createDestructuringDeclaration("val ${destructuringDeclaration.text} = ${letReceiverKtProperty.name}")
+                .addToBlock(ktBlockExpression, ktReturnExpression)
             ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), ktReturnExpression)
         }
 
         val statements = ktFunctionLiteral
-                .bodyExpression!!
-                .statements
+            .bodyExpression!!
+            .statements
 
         ktBlockExpression.addRangeBefore(statements.first(), statements.last(), ktReturnExpression)
 
@@ -260,11 +263,11 @@ private fun KtNameReferenceExpression.hasElvisParentWithNullEarlyReturn(): Boole
 }
 
 private fun KtProperty.suggestNameByName(name: String): String = KotlinNameSuggester.suggestNameByName(
-        name,
-        NewDeclarationNameValidator(
-            container = getStrictParentOfType<KtDeclaration>()!!,
-            anchor = this,
-            target = NewDeclarationNameValidator.Target.VARIABLES
+    name,
+    NewDeclarationNameValidator(
+        container = getStrictParentOfType<KtDeclaration>()!!,
+        anchor = this,
+        target = NewDeclarationNameValidator.Target.VARIABLES
     )
 )
 
@@ -289,11 +292,11 @@ private fun KtNamedFunction.makeNullableLetReturnEarly() = processNameReferenceE
 
     runWriteAction {
         letReceiverKtProperty = ktPsiFactory
-                .createExpressionByPattern(
-                        "$0 ?: return@mono null",
-                        nullableLetCall.receiverExpression
-                )
-                .introduceVariableInBlock(ktBlockExpression, letKtProperty)
+            .createExpressionByPattern(
+                "$0 ?: return@mono null",
+                nullableLetCall.receiverExpression
+            )
+            .introduceVariableInBlock(ktBlockExpression, letKtProperty)
 
         ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), letKtProperty)
     }
@@ -312,8 +315,8 @@ private fun KtNamedFunction.makeNullableLetReturnEarly() = processNameReferenceE
         }
 
         ktBlockExpression.addBefore(
-                ktPsiFactory.createProperty("val ${letKtProperty.name} = ${statements.last().text}"),
-                letKtProperty
+            ktPsiFactory.createProperty("val ${letKtProperty.name} = ${statements.last().text}"),
+            letKtProperty
         )
 
         letKtProperty.delete()

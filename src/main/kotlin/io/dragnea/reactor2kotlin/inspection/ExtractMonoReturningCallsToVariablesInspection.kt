@@ -26,8 +26,8 @@ import org.jetbrains.kotlin.psi.namedFunctionVisitor
 // TODO: Implement Kotlin flip if condition intention
 class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection() {
     override fun buildVisitor(
-            holder: ProblemsHolder,
-            isOnTheFly: Boolean
+        holder: ProblemsHolder,
+        isOnTheFly: Boolean
     ) = namedFunctionVisitor { ktNamedFunction ->
         ktNamedFunction.returnsMono() || return@namedFunctionVisitor
 
@@ -48,8 +48,16 @@ class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection(
             with(descriptor.psiElement.parentOfType<KtNamedFunction>()!!) {
                 runWriteAction {
                     ImportInsertHelperImpl.addImport(project, containingKtFile, FqName("kotlinx.coroutines.async"))
-                    ImportInsertHelperImpl.addImport(project, containingKtFile, FqName("kotlinx.coroutines.reactive.awaitSingle"))
-                    ImportInsertHelperImpl.addImport(project, containingKtFile, FqName("kotlinx.coroutines.reactive.awaitFirstOrNull"))
+                    ImportInsertHelperImpl.addImport(
+                        project,
+                        containingKtFile,
+                        FqName("kotlinx.coroutines.reactive.awaitSingle")
+                    )
+                    ImportInsertHelperImpl.addImport(
+                        project,
+                        containingKtFile,
+                        FqName("kotlinx.coroutines.reactive.awaitFirstOrNull")
+                    )
                     ImportInsertHelperImpl.addImport(project, containingKtFile, FqName("reactor.util.function.Tuples"))
 
                     extractPublisherReturningCallsToMethods()
