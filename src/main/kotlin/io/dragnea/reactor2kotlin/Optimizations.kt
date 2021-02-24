@@ -1,7 +1,6 @@
 package io.dragnea.reactor2kotlin
 
 import com.intellij.psi.PsiElement
-import com.intellij.psi.util.collectDescendantsOfType
 import com.intellij.psi.util.parentOfType
 import com.intellij.refactoring.rename.NameSuggestionProvider
 import com.intellij.refactoring.rename.RenameProcessor
@@ -32,6 +31,7 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtReturnExpression
 import org.jetbrains.kotlin.psi.createExpressionByPattern
+import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
 import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics
 import org.jetbrains.kotlin.utils.addToStdlib.cast

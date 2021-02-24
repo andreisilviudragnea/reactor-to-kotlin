@@ -1,5 +1,5 @@
 plugins {
-    id("org.jetbrains.intellij") version "0.6.5"
+    id("org.jetbrains.intellij") version "0.7.2"
     java
     kotlin("jvm") version "1.4.30"
 }
@@ -12,7 +12,7 @@ intellij {
 
     setPlugins(
             "java",
-            "org.jetbrains.kotlin:211-1.4.21-release-IJ5538.2"
+            "org.jetbrains.kotlin:211-1.4.21-release-IJ6085.14"
     )
 
     updateSinceUntilBuild = false
