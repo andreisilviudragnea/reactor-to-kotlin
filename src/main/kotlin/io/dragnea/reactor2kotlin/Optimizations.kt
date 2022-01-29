@@ -142,7 +142,7 @@ private fun KtNamedFunction.fixUselessElvisOperator() =
             }
             ?: return@process false
 
-        runWriteAction { dropEnclosingParenthesesIfPossible(ktBinaryExpression.replaced(ktBinaryExpression.left!!)) }
+        runWriteAction { ktBinaryExpression.replaced(ktBinaryExpression.left!!).dropEnclosingParenthesesIfPossible() }
         true
     }
 
@@ -343,11 +343,10 @@ fun KtProperty.hasAsyncInitializer(): Boolean {
 
 fun KtBlockExpression.renameAllRedeclarations(): Boolean {
     var done = renameFirstRedeclaration()
-    var atLeastOnce = done
+    val atLeastOnce = done
 
     while (done) {
         done = renameFirstRedeclaration()
-        atLeastOnce = atLeastOnce || done
     }
 
     return atLeastOnce
