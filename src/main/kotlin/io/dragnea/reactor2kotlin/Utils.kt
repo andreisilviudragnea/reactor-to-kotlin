@@ -230,8 +230,9 @@ fun KtNameReferenceExpression.getAwaitFirstOrNullCallIsReceiverOf(): KtQualified
 
     val ktCallExpression = ktQualifiedExpression.selectorExpression.castSafelyTo<KtCallExpression>() ?: return null
 
-    if (ktCallExpression.calleeExpression.cast<KtNameReferenceExpression>().getReferencedName() != "awaitFirstOrNull")
+    if (ktCallExpression.calleeExpression.cast<KtNameReferenceExpression>().getReferencedName() != "awaitFirstOrNull") {
         return null
+    }
 
     return ktQualifiedExpression
 }
