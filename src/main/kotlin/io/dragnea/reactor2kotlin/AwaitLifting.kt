@@ -29,112 +29,116 @@ import org.jetbrains.kotlin.psi.createExpressionByPattern
 import org.jetbrains.kotlin.psi.psiUtil.referenceExpression
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 
-fun KtNamedFunction.wrapInMono() = processNameReferenceExpressions here@{
-    it.getAwaitFirstOrNullCallIsReceiverOf() == null || return@here false
+fun KtNamedFunction.wrapInMono() =
+    processNameReferenceExpressions here@{
+        it.getAwaitFirstOrNullCallIsReceiverOf() == null || return@here false
 
-    val ktProperty = it.resolve().castSafelyTo<KtProperty>() ?: return@here false
+        val ktProperty = it.resolve().castSafelyTo<KtProperty>() ?: return@here false
 
-    ktProperty.hasMonoInitializer() || return@here false
+        ktProperty.hasMonoInitializer() || return@here false
 
-    KtPsiFactory(this).run {
-        val initializer = ktProperty.initializer!!
+        KtPsiFactory(this).run {
+            val initializer = ktProperty.initializer!!
 
-        val monoExpression =
-            createExpression("kotlinx.coroutines.reactor.mono { ${initializer.text}.awaitFirstOrNull() }")
+            val monoExpression =
+                createExpression("kotlinx.coroutines.reactor.mono { ${initializer.text}.awaitFirstOrNull() }")
 
-        val replacedMonoExpression = initializer.replaced(monoExpression)
+            val replacedMonoExpression = initializer.replaced(monoExpression)
 
-        replacedMonoExpression
-            .cast<KtDotQualifiedExpression>()
-            .selectorExpression
-            .cast<KtCallExpression>()
-            .lambdaArguments
-            .single()
-            .getLambdaExpression()!!
-            .bodyExpression!!
-            .firstStatement
-            .cast<KtDotQualifiedExpression>()
-            .receiverExpression
-            .introduceVariable()
+            replacedMonoExpression
+                .cast<KtDotQualifiedExpression>()
+                .selectorExpression
+                .cast<KtCallExpression>()
+                .lambdaArguments
+                .single()
+                .getLambdaExpression()!!
+                .bodyExpression!!
+                .firstStatement
+                .cast<KtDotQualifiedExpression>()
+                .receiverExpression
+                .introduceVariable()
 
-        ShortenReferences.DEFAULT.process(replacedMonoExpression)
+            ShortenReferences.DEFAULT.process(replacedMonoExpression)
+        }
+
+        return@here true
     }
 
-    return@here true
-}
+fun KtProperty.hasMonoInitializer() =
+    hasMonoMapInitializer() ||
+        hasMonoFlatMapInitializer() ||
+        hasMonoFilterInitializer() ||
+        hasMonoFilterWhenInitializer() ||
+        hasMonoSwitchIfEmptyInitializer() ||
+        hasMonoZip2Initializer() ||
+        hasMonoZip3Initializer() ||
+        hasMonoThenReturnInitializer() ||
+        hasMonoThenInitializer() ||
+        hasMonoJustInitializer() ||
+        hasMonoJustOrEmptyInitializer() ||
+        hasMonoEmptyInitializer() ||
+        hasMonoDeferInitializer() ||
+        hasMonoOnErrorReturnInitializer() ||
+        hasMonoOnErrorReturn1Initializer()
 
-fun KtProperty.hasMonoInitializer() = hasMonoMapInitializer() ||
-    hasMonoFlatMapInitializer() ||
-    hasMonoFilterInitializer() ||
-    hasMonoFilterWhenInitializer() ||
-    hasMonoSwitchIfEmptyInitializer() ||
-    hasMonoZip2Initializer() ||
-    hasMonoZip3Initializer() ||
-    hasMonoThenReturnInitializer() ||
-    hasMonoThenInitializer() ||
-    hasMonoJustInitializer() ||
-    hasMonoJustOrEmptyInitializer() ||
-    hasMonoEmptyInitializer() ||
-    hasMonoDeferInitializer() ||
-    hasMonoOnErrorReturnInitializer() ||
-    hasMonoOnErrorReturn1Initializer()
+fun KtNamedFunction.liftAwait() =
+    processNameReferenceExpressions here@{
+        it.liftAwaitMonoBuilder() && return@here true
 
-fun KtNamedFunction.liftAwait() = processNameReferenceExpressions here@{
-    it.liftAwaitMonoBuilder() && return@here true
+        it.liftAwaitElvisOperator() && return@here true
 
-    it.liftAwaitElvisOperator() && return@here true
+        it.liftAwaitLetBlock() && return@here true
 
-    it.liftAwaitLetBlock() && return@here true
+        it.liftAwaitRunBlock() && return@here true
 
-    it.liftAwaitRunBlock() && return@here true
+        it.liftAwaitIfExpression() && return@here true
 
-    it.liftAwaitIfExpression() && return@here true
+        it.liftAwaitSimpleAssignment() && return@here true
 
-    it.liftAwaitSimpleAssignment() && return@here true
+        it.liftAwaitMonoMap() && return@here true
 
-    it.liftAwaitMonoMap() && return@here true
+        it.liftAwaitMonoFlatMap(KtProperty::hasMonoFlatMapInitializer) && return@here true
 
-    it.liftAwaitMonoFlatMap(KtProperty::hasMonoFlatMapInitializer) && return@here true
+        it.liftAwaitMonoFlatMap(KtProperty::hasMonoFlatMapManyInitializer) && return@here true
 
-    it.liftAwaitMonoFlatMap(KtProperty::hasMonoFlatMapManyInitializer) && return@here true
+        it.liftAwaitMonoZip2() && return@here true
 
-    it.liftAwaitMonoZip2() && return@here true
+        it.liftAwaitMonoZip3() && return@here true
 
-    it.liftAwaitMonoZip3() && return@here true
+        it.liftAwaitMonoFilter() && return@here true
 
-    it.liftAwaitMonoFilter() && return@here true
+        it.liftAwaitMonoFilterWhen() && return@here true
 
-    it.liftAwaitMonoFilterWhen() && return@here true
+        it.liftAwaitMonoSwitchIfEmpty() && return@here true
 
-    it.liftAwaitMonoSwitchIfEmpty() && return@here true
+        it.liftAwaitMonoThenReturn() && return@here true
 
-    it.liftAwaitMonoThenReturn() && return@here true
+        it.liftAwaitMonoThen() && return@here true
 
-    it.liftAwaitMonoThen() && return@here true
+        it.liftAwaitMonoDefer() && return@here true
 
-    it.liftAwaitMonoDefer() && return@here true
+        it.liftAwaitMonoJust() && return@here true
 
-    it.liftAwaitMonoJust() && return@here true
+        it.liftAwaitMonoJustOrEmpty() && return@here true
 
-    it.liftAwaitMonoJustOrEmpty() && return@here true
+        it.liftAwaitMonoEmpty() && return@here true
 
-    it.liftAwaitMonoEmpty() && return@here true
+        it.liftAwaitMonoOnErrorReturn() && return@here true
 
-    it.liftAwaitMonoOnErrorReturn() && return@here true
+        it.liftAwaitMonoOnErrorReturn1() && return@here true
 
-    it.liftAwaitMonoOnErrorReturn1() && return@here true
-
-    false
-}
+        false
+    }
 
 data class AwaitLiftingContext(
     val awaitCall: KtCallExpression,
     val ktProperty: KtProperty,
-    val ktPsiFactory: KtPsiFactory
+    val ktPsiFactory: KtPsiFactory,
 ) {
-    fun KtExpression.replaceWithAwaited(): PsiElement = replace(
-        ktPsiFactory.createExpressionByPattern("$0?.$1", this, awaitCall)
-    )
+    fun KtExpression.replaceWithAwaited(): PsiElement =
+        replace(
+            ktPsiFactory.createExpressionByPattern("$0?.$1", this, awaitCall),
+        )
 
     fun KtFunctionLiteral.process() {
         processReturnExpressions {
@@ -155,7 +159,7 @@ data class OperatorAwaitLiftingContext(
     val awaitCall: KtQualifiedExpression,
     val anchor: PsiElement,
     val ktBlockExpression: KtBlockExpression,
-    val ktPsiFactory: KtPsiFactory
+    val ktPsiFactory: KtPsiFactory,
 ) {
     fun String.createExpression() = ktPsiFactory.createExpression(this)
 
@@ -168,9 +172,10 @@ data class OperatorAwaitLiftingContext(
     }
 
     fun String.createPropertyInBlock(): KtProperty {
-        val addedProperty = ktPsiFactory
-            .createProperty(this)
-            .addToBlock(ktBlockExpression, anchor)
+        val addedProperty =
+            ktPsiFactory
+                .createProperty(this)
+                .addToBlock(ktBlockExpression, anchor)
         ktPsiFactory.createNewLine().addToBlock(ktBlockExpression, anchor)
         return addedProperty
     }
@@ -179,9 +184,10 @@ data class OperatorAwaitLiftingContext(
 
     fun KtProperty.await() = "$name.await()".createExpressionAsVariableInBlock()
 
-    private fun KtExpression.replaceWithAwaited(): PsiElement = replace(
-        ktPsiFactory.createExpressionByPattern("$0?.$1", this, awaitCall.selectorExpression!!)
-    )
+    private fun KtExpression.replaceWithAwaited(): PsiElement =
+        replace(
+            ktPsiFactory.createExpressionByPattern("$0?.$1", this, awaitCall.selectorExpression!!),
+        )
 
     fun KtFunctionLiteral.process() {
         processReturnExpressions {
@@ -198,7 +204,7 @@ data class OperatorAwaitLiftingContext(
 
 private fun KtNameReferenceExpression.liftAwait(
     predicate: (KtProperty) -> Boolean,
-    block: AwaitLiftingContext.() -> Unit
+    block: AwaitLiftingContext.() -> Unit,
 ): Boolean {
     val awaitCall = getAwaitFirstOrNullCall() ?: return false
 
@@ -215,7 +221,7 @@ private fun KtNameReferenceExpression.liftAwait(
 
 private fun KtNameReferenceExpression.liftAwaitOperator(
     predicate: (KtProperty) -> Boolean,
-    block: OperatorAwaitLiftingContext.() -> Unit
+    block: OperatorAwaitLiftingContext.() -> Unit,
 ): Boolean {
     val awaitCall = getAwaitFirstOrNullCallIsReceiverOf() ?: return false
 
@@ -231,7 +237,7 @@ private fun KtNameReferenceExpression.liftAwaitOperator(
         awaitCall,
         anchor,
         anchor.parentOfType()!!,
-        ktPsiFactory
+        ktPsiFactory,
     ).block()
 
     ktProperty.delete()
@@ -242,10 +248,11 @@ private fun KtNameReferenceExpression.liftAwaitOperator(
 private fun KtProperty.hasMonoBuilderInitializer(): Boolean {
     val ktCallExpression = initializer.castSafelyTo<KtCallExpression>() ?: return false
 
-    val ktNamedFunction = ktCallExpression
-        .referenceExpression()!!
-        .resolve()
-        .castSafelyTo<KtNamedFunction>() ?: return false
+    val ktNamedFunction =
+        ktCallExpression
+            .referenceExpression()!!
+            .resolve()
+            .castSafelyTo<KtNamedFunction>() ?: return false
 
     ktNamedFunction.name == "mono" || return false
 
@@ -278,17 +285,18 @@ private fun KtProperty.hasElvisInitializer(): Boolean {
     return ktBinaryExpression.isElvis()
 }
 
-private fun KtNameReferenceExpression.liftAwaitElvisOperator() = liftAwait(KtProperty::hasElvisInitializer) {
-    val ktBinaryExpression = ktProperty.initializer.cast<KtBinaryExpression>()
+private fun KtNameReferenceExpression.liftAwaitElvisOperator() =
+    liftAwait(KtProperty::hasElvisInitializer) {
+        val ktBinaryExpression = ktProperty.initializer.cast<KtBinaryExpression>()
 
-    ktBinaryExpression.replace(
-        ktPsiFactory.createExpressionByPattern(
-            "$0?.awaitFirstOrNull() ?: $1.awaitFirstOrNull()",
-            ktBinaryExpression.left!!,
-            ktBinaryExpression.right!!
+        ktBinaryExpression.replace(
+            ktPsiFactory.createExpressionByPattern(
+                "$0?.awaitFirstOrNull() ?: $1.awaitFirstOrNull()",
+                ktBinaryExpression.left!!,
+                ktBinaryExpression.right!!,
+            ),
         )
-    )
-}
+    }
 
 fun KtNameReferenceExpression.getLetKtProperty(): KtProperty? {
     val ktProperty = resolve().castSafelyTo<KtProperty>() ?: return null
@@ -312,13 +320,15 @@ private fun KtProperty.hasRunInitializer(): Boolean {
     return ktCallExpression.isRunCall()
 }
 
-private fun KtNameReferenceExpression.liftAwaitLetBlock() = liftAwait(KtProperty::hasLetInitializer) {
-    ktProperty.ktFunctionLiteral().process()
-}
+private fun KtNameReferenceExpression.liftAwaitLetBlock() =
+    liftAwait(KtProperty::hasLetInitializer) {
+        ktProperty.ktFunctionLiteral().process()
+    }
 
-private fun KtNameReferenceExpression.liftAwaitRunBlock() = liftAwait(KtProperty::hasRunInitializer) {
-    ktProperty.initializer.cast<KtCallExpression>().firstLambdaArgument().process()
-}
+private fun KtNameReferenceExpression.liftAwaitRunBlock() =
+    liftAwait(KtProperty::hasRunInitializer) {
+        ktProperty.initializer.cast<KtCallExpression>().firstLambdaArgument().process()
+    }
 
 private fun KtProperty.hasIfInitializer(): Boolean {
     initializer.castSafelyTo<KtIfExpression>() ?: return false
@@ -332,28 +342,31 @@ private fun AwaitLiftingContext.processExpression(ktExpression: KtExpression) {
     }
 }
 
-private fun KtNameReferenceExpression.liftAwaitIfExpression() = liftAwait(KtProperty::hasIfInitializer) {
-    val ifExpression = ktProperty.initializer.cast<KtIfExpression>()
+private fun KtNameReferenceExpression.liftAwaitIfExpression() =
+    liftAwait(KtProperty::hasIfInitializer) {
+        val ifExpression = ktProperty.initializer.cast<KtIfExpression>()
 
-    processExpression(ifExpression.then!!)
+        processExpression(ifExpression.then!!)
 
-    processExpression(ifExpression.`else`!!)
-}
+        processExpression(ifExpression.`else`!!)
+    }
 
 private fun KtProperty.hasSimpleInitializer(): Boolean {
     initializer.castSafelyTo<KtNameReferenceExpression>() ?: return false
     return true
 }
 
-private fun KtNameReferenceExpression.liftAwaitSimpleAssignment() = liftAwait(KtProperty::hasSimpleInitializer) {
-    ktProperty.initializer!!.replaceWithAwaited()
-}
+private fun KtNameReferenceExpression.liftAwaitSimpleAssignment() =
+    liftAwait(KtProperty::hasSimpleInitializer) {
+        ktProperty.initializer!!.replaceWithAwaited()
+    }
 
-private fun KtNameReferenceExpression.liftAwaitMonoMap() = liftAwaitOperator(KtProperty::hasMonoMapInitializer) {
-    val letKtProperty = awaitReceiverAndExecuteLambdaBodyWithValue()
+private fun KtNameReferenceExpression.liftAwaitMonoMap() =
+    liftAwaitOperator(KtProperty::hasMonoMapInitializer) {
+        val letKtProperty = awaitReceiverAndExecuteLambdaBodyWithValue()
 
-    ktNameReferenceExpression.parent.replace("${letKtProperty.name}".createExpression())
-}
+        ktNameReferenceExpression.parent.replace("${letKtProperty.name}".createExpression())
+    }
 
 private fun KtNameReferenceExpression.liftAwaitMonoFlatMap(predicate: (KtProperty) -> Boolean) =
     liftAwaitOperator(predicate) {
@@ -364,66 +377,76 @@ private fun KtNameReferenceExpression.liftAwaitMonoFlatMap(predicate: (KtPropert
         ktNameReferenceExpression.parent.replace("${letKtProperty.name}".createExpression())
     }
 
-private fun KtNameReferenceExpression.liftAwaitMonoZip2() = liftAwaitOperator(KtProperty::hasMonoZip2Initializer) {
-    val valueArguments = ktProperty.valueArguments()
+private fun KtNameReferenceExpression.liftAwaitMonoZip2() =
+    liftAwaitOperator(KtProperty::hasMonoZip2Initializer) {
+        val valueArguments = ktProperty.valueArguments()
 
-    val p1Async = valueArguments[0].async()
-    val p2Async = valueArguments[1].async()
+        val p1Async = valueArguments[0].async()
+        val p2Async = valueArguments[1].async()
 
-    val p1Awaited = p1Async.await()
-    val p2Awaited = p2Async.await()
+        val p1Awaited = p1Async.await()
+        val p2Awaited = p2Async.await()
 
-    val p1AwaitedName = p1Awaited.name
-    val p2AwaitedName = p2Awaited.name
+        val p1AwaitedName = p1Awaited.name
+        val p2AwaitedName = p2Awaited.name
 
-    val lambdaExpression = valueArguments[2].getArgumentExpression().cast<KtLambdaExpression>()
+        val lambdaExpression = valueArguments[2].getArgumentExpression().cast<KtLambdaExpression>()
 
-    val valueParameterList = lambdaExpression.functionLiteral.valueParameterList!!
-    valueParameterList.replace(ktPsiFactory.createParameterList("(${valueParameterList.text})"))
+        val valueParameterList = lambdaExpression.functionLiteral.valueParameterList!!
+        valueParameterList.replace(ktPsiFactory.createParameterList("(${valueParameterList.text})"))
 
-    ktNameReferenceExpression.parent.replace(
-        "if ($p1AwaitedName != null && $p2AwaitedName != null) Pair($p1AwaitedName, $p2AwaitedName).let ${lambdaExpression.text} else null"
-            .createExpression()
-    )
-}
+        ktNameReferenceExpression.parent.replace(
+            (
+                "if ($p1AwaitedName != null && $p2AwaitedName != null) " +
+                    "Pair($p1AwaitedName, $p2AwaitedName).let ${lambdaExpression.text} else null"
+            )
+                .createExpression(),
+        )
+    }
 
-private fun KtNameReferenceExpression.liftAwaitMonoZip3() = liftAwaitOperator(KtProperty::hasMonoZip3Initializer) {
-    val valueArguments = ktProperty.valueArguments()
+private fun KtNameReferenceExpression.liftAwaitMonoZip3() =
+    liftAwaitOperator(KtProperty::hasMonoZip3Initializer) {
+        val valueArguments = ktProperty.valueArguments()
 
-    val p1Async = valueArguments[0].async()
-    val p2Async = valueArguments[1].async()
-    val p3Async = valueArguments[2].async()
+        val p1Async = valueArguments[0].async()
+        val p2Async = valueArguments[1].async()
+        val p3Async = valueArguments[2].async()
 
-    val p1Awaited = p1Async.await()
-    val p2Awaited = p2Async.await()
-    val p3Awaited = p3Async.await()
+        val p1Awaited = p1Async.await()
+        val p2Awaited = p2Async.await()
+        val p3Awaited = p3Async.await()
 
-    val p1AwaitedName = p1Awaited.name
-    val p2AwaitedName = p2Awaited.name
-    val p3AwaitedName = p3Awaited.name
+        val p1AwaitedName = p1Awaited.name
+        val p2AwaitedName = p2Awaited.name
+        val p3AwaitedName = p3Awaited.name
 
-    ktNameReferenceExpression.parent.replace(
-        "if ($p1AwaitedName != null && $p2AwaitedName != null && $p3AwaitedName != null) Tuples.of($p1AwaitedName, $p2AwaitedName, $p3AwaitedName) else null"
-            .createExpression()
-    )
-}
+        ktNameReferenceExpression.parent.replace(
+            (
+                "if ($p1AwaitedName != null && $p2AwaitedName != null && $p3AwaitedName != null) " +
+                    "Tuples.of($p1AwaitedName, $p2AwaitedName, $p3AwaitedName) else null"
+            )
+                .createExpression(),
+        )
+    }
 
-private fun KtProperty.valueArguments() = initializer
-    .cast<KtQualifiedExpression>()
-    .selectorExpression
-    .cast<KtCallExpression>()
-    .valueArguments
+private fun KtProperty.valueArguments() =
+    initializer
+        .cast<KtQualifiedExpression>()
+        .selectorExpression
+        .cast<KtCallExpression>()
+        .valueArguments
 
-private fun KtNameReferenceExpression.liftAwaitMonoFilter() = liftAwaitOperator(KtProperty::hasMonoFilterInitializer) {
-    val receiverAwaitedKtProperty = awaitReceiverToProperty()
+private fun KtNameReferenceExpression.liftAwaitMonoFilter() =
+    liftAwaitOperator(KtProperty::hasMonoFilterInitializer) {
+        val receiverAwaitedKtProperty = awaitReceiverToProperty()
 
-    val letKtProperty = executeLambdaBodyWithValue(receiverAwaitedKtProperty)
+        val letKtProperty = executeLambdaBodyWithValue(receiverAwaitedKtProperty)
 
-    val ifKtProperty =
-        "if (${letKtProperty.name} == true) ${receiverAwaitedKtProperty.name} else null".createExpressionAsVariableInBlock()
+        val ifKtProperty =
+            "if (${letKtProperty.name} == true) ${receiverAwaitedKtProperty.name} else null".createExpressionAsVariableInBlock()
 
-    ktNameReferenceExpression.parent.replace("${ifKtProperty.name}".createExpression())
-}
+        ktNameReferenceExpression.parent.replace("${ifKtProperty.name}".createExpression())
+    }
 
 private fun KtNameReferenceExpression.liftAwaitMonoFilterWhen() =
     liftAwaitOperator(KtProperty::hasMonoFilterWhenInitializer) {
@@ -461,57 +484,69 @@ private fun KtNameReferenceExpression.liftAwaitMonoThenReturn() =
         ktNameReferenceExpression.parent.replace(firstArgumentExpression())
     }
 
-private fun KtNameReferenceExpression.liftAwaitMonoThen() = liftAwaitOperator(KtProperty::hasMonoThenInitializer) {
-    awaitReceiver()
+private fun KtNameReferenceExpression.liftAwaitMonoThen() =
+    liftAwaitOperator(KtProperty::hasMonoThenInitializer) {
+        awaitReceiver()
 
-    "val ${ktProperty.name} = ${firstArgumentExpression().text}".createPropertyInBlock()
-}
+        "val ${ktProperty.name} = ${firstArgumentExpression().text}".createPropertyInBlock()
+    }
 
-private fun KtNameReferenceExpression.liftAwaitMonoDefer() = liftAwaitOperator(KtProperty::hasMonoDeferInitializer) {
-    val parentInBlock = ktNameReferenceExpression.selfOrParentInBlock()!!
+private fun KtNameReferenceExpression.liftAwaitMonoDefer() =
+    liftAwaitOperator(KtProperty::hasMonoDeferInitializer) {
+        val parentInBlock = ktNameReferenceExpression.selfOrParentInBlock()!!
 
-    val ktFunctionLiteral = ktProperty
-        .initializer
-        .cast<KtDotQualifiedExpression>()
-        .selectorExpression
-        .cast<KtCallExpression>()
-        .firstLambdaArgument()
+        val ktFunctionLiteral =
+            ktProperty
+                .initializer
+                .cast<KtDotQualifiedExpression>()
+                .selectorExpression
+                .cast<KtCallExpression>()
+                .firstLambdaArgument()
 
-    val newProperty = "run ${ktFunctionLiteral.text}"
-        .createExpression()
-        .introduceVariableInBlock(parentInBlock.parent.cast(), parentInBlock)
+        val newProperty =
+            "run ${ktFunctionLiteral.text}"
+                .createExpression()
+                .introduceVariableInBlock(parentInBlock.parent.cast(), parentInBlock)
 
-    ktNameReferenceExpression.replace(newProperty.name!!.createExpression())
-}
+        ktNameReferenceExpression.replace(newProperty.name!!.createExpression())
+    }
 
-private fun KtNameReferenceExpression.liftAwaitMonoJust() = liftAwaitOperator(KtProperty::hasMonoJustInitializer) {
-    awaitCall.replace(firstArgumentExpression())
-}
+private fun KtNameReferenceExpression.liftAwaitMonoJust() =
+    liftAwaitOperator(KtProperty::hasMonoJustInitializer) {
+        awaitCall.replace(firstArgumentExpression())
+    }
 
 private fun KtNameReferenceExpression.liftAwaitMonoJustOrEmpty() =
     liftAwaitOperator(KtProperty::hasMonoJustOrEmptyInitializer) {
         awaitCall.replace(firstArgumentExpression())
     }
 
-private fun KtNameReferenceExpression.liftAwaitMonoEmpty() = liftAwaitOperator(KtProperty::hasMonoEmptyInitializer) {
-    awaitCall.replace("null".createExpression())
-}
+private fun KtNameReferenceExpression.liftAwaitMonoEmpty() =
+    liftAwaitOperator(KtProperty::hasMonoEmptyInitializer) {
+        awaitCall.replace("null".createExpression())
+    }
 
 private fun KtNameReferenceExpression.liftAwaitMonoOnErrorReturn() =
     liftAwaitOperator(KtProperty::hasMonoOnErrorReturnInitializer) {
         val valueArguments = ktProperty.valueArguments()
 
-        val classNameReferenceExpression = valueArguments[0]
-            .getArgumentExpression()
-            .cast<KtQualifiedExpression>()
-            .receiverExpression
-            .cast<KtClassLiteralExpression>()
-            .receiverExpression
-            .cast<KtNameReferenceExpression>()
+        val classNameReferenceExpression =
+            valueArguments[0]
+                .getArgumentExpression()
+                .cast<KtQualifiedExpression>()
+                .receiverExpression
+                .cast<KtClassLiteralExpression>()
+                .receiverExpression
+                .cast<KtNameReferenceExpression>()
 
         ktNameReferenceExpression
             .parent
-            .replace("try { ${ktProperty.receiverNameReferenceExpression().text}.awaitFirstOrNull() } catch (e: ${classNameReferenceExpression.text}) { ${valueArguments[1].text} }".createExpression())
+            .replace(
+                (
+                    "try { ${ktProperty.receiverNameReferenceExpression().text}.awaitFirstOrNull() } " +
+                        "catch (e: ${classNameReferenceExpression.text}) { ${valueArguments[1].text} }"
+                ).createExpression(),
+            )
     }
 
 private fun KtNameReferenceExpression.liftAwaitMonoOnErrorReturn1() =
@@ -520,12 +555,18 @@ private fun KtNameReferenceExpression.liftAwaitMonoOnErrorReturn1() =
 
         ktNameReferenceExpression
             .parent
-            .replace("try { ${ktProperty.receiverNameReferenceExpression().text}.awaitFirstOrNull() } catch (e: Throwable) { ${valueArguments[0].text} }".createExpression())
+            .replace(
+                (
+                    "try { ${ktProperty.receiverNameReferenceExpression().text}.awaitFirstOrNull() } " +
+                        "catch (e: Throwable) { ${valueArguments[0].text} }"
+                ).createExpression(),
+            )
     }
 
-private fun OperatorAwaitLiftingContext.firstArgumentExpression(): KtExpression = ktProperty
-    .valueArguments()[0]
-    .getArgumentExpression()!!
+private fun OperatorAwaitLiftingContext.firstArgumentExpression(): KtExpression =
+    ktProperty
+        .valueArguments()[0]
+        .getArgumentExpression()!!
 
 private fun OperatorAwaitLiftingContext.awaitReceiverAndExecuteLambdaBodyWithValue(): KtProperty {
     val receiverAwaitedKtProperty = awaitReceiverToProperty()
@@ -538,10 +579,11 @@ private fun OperatorAwaitLiftingContext.awaitReceiver(): KtExpression =
     "${ktProperty.receiverNameReferenceExpression().text}.awaitFirstOrNull()".createExpressionInBlock()
 
 private fun OperatorAwaitLiftingContext.executeLambdaBodyWithValue(receiverAwaitedKtProperty: KtProperty): KtProperty {
-    val copiedInitializer = ktProperty
-        .initializer!!
-        .copied()
-        .addToBlock(ktProperty.parentOfType()!!, ktProperty)
+    val copiedInitializer =
+        ktProperty
+            .initializer!!
+            .copied()
+            .addToBlock(ktProperty.parentOfType()!!, ktProperty)
 
     val ktFunctionLiteral = copiedInitializer.cast<KtQualifiedExpression>().firstLambdaArgument()
     ktFunctionLiteral.setReturnLabelsToLet()
@@ -555,10 +597,11 @@ private fun OperatorAwaitLiftingContext.executeLambdaBodyWithValue(receiverAwait
 }
 
 private fun OperatorAwaitLiftingContext.executeLambdaBodyWithValueAndLiftAwait(receiverAwaitedKtProperty: KtProperty): KtProperty {
-    val copiedInitializer = ktProperty
-        .initializer!!
-        .copied()
-        .addToBlock(ktProperty.parentOfType()!!, ktProperty)
+    val copiedInitializer =
+        ktProperty
+            .initializer!!
+            .copied()
+            .addToBlock(ktProperty.parentOfType()!!, ktProperty)
 
     val ktFunctionLiteral = copiedInitializer.cast<KtQualifiedExpression>().firstLambdaArgument()
     ktFunctionLiteral.setReturnLabelsToLet()
@@ -582,9 +625,10 @@ private fun OperatorAwaitLiftingContext.executeLambdaBodyWithValueAndLiftAwait(r
     return letKtProperty
 }
 
-fun KtFunctionLiteral.setReturnLabelsToLet() = processReturnExpressions {
-    it.replace(ktPsiFactory.createExpressionByPattern("return@let $0", it.returnedExpression!!))
-}
+fun KtFunctionLiteral.setReturnLabelsToLet() =
+    processReturnExpressions {
+        it.replace(ktPsiFactory.createExpressionByPattern("return@let $0", it.returnedExpression!!))
+    }
 
 fun KtElement.selfOrParentInBlock(): PsiElement? {
     var current: PsiElement? = this

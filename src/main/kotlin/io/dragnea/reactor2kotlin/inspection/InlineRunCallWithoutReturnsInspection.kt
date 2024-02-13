@@ -16,33 +16,40 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.callExpressionVisitor
 
 class InlineRunCallWithoutReturnsInspection : AbstractKotlinInspection() {
+    override fun buildVisitor(
+        holder: ProblemsHolder,
+        isOnTheFly: Boolean,
+    ): PsiElementVisitor =
+        callExpressionVisitor {
+            it.isRunWithoutReturns() || return@callExpressionVisitor
 
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor = callExpressionVisitor {
-        it.isRunWithoutReturns() || return@callExpressionVisitor
-
-        holder.registerProblem(
-            it.calleeExpression!!,
-            "Run call without returns",
-            ProblemHighlightType.WARNING,
-            Fix()
-        )
-    }
+            holder.registerProblem(
+                it.calleeExpression!!,
+                "Run call without returns",
+                ProblemHighlightType.WARNING,
+                Fix(),
+            )
+        }
 
     class Fix : LocalQuickFix {
         override fun startInWriteAction() = false
 
         override fun getFamilyName() = "Inline run call without returns"
 
-        override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
+        override fun applyFix(
+            project: Project,
+            descriptor: ProblemDescriptor,
+        ) {
             descriptor.psiElement.parentOfType<KtCallExpression>()!!.inlineRunWithoutReturnsAndRenameRedeclarations()
         }
     }
 }
 
 fun KtCallExpression.inlineRunWithoutReturnsAndRenameRedeclarations() {
-    val ktBlockExpression = runWriteAction {
-        inlineRunWithoutReturns()!!
-    }
+    val ktBlockExpression =
+        runWriteAction {
+            inlineRunWithoutReturns()!!
+        }
 
     while (true) {
         if (!ktBlockExpression.renameFirstRedeclaration()) {

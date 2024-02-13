@@ -61,10 +61,11 @@ fun KtNamedFunction.optimizeCode() {
 fun KtCallExpression.isRunWithoutReturns(): Boolean {
     isRunCall() || return false
 
-    val functionLiteral = this
-        .lambdaArguments[0]
-        .getLambdaExpression()!!
-        .functionLiteral
+    val functionLiteral =
+        this
+            .lambdaArguments[0]
+            .getLambdaExpression()!!
+            .functionLiteral
 
     !functionLiteral.hasReturns() || return false
 
@@ -72,20 +73,22 @@ fun KtCallExpression.isRunWithoutReturns(): Boolean {
 }
 
 val KtCallExpression.statementsFromFirstLambdaArgument: List<KtExpression>
-    get() = this
-        .lambdaArguments[0]
-        .getLambdaExpression()!!
-        .functionLiteral
-        .bodyExpression!!
-        .statements
+    get() =
+        this
+            .lambdaArguments[0]
+            .getLambdaExpression()!!
+            .functionLiteral
+            .bodyExpression!!
+            .statements
 
-fun KtNamedFunction.removeRunsWithoutReturns() = process<KtNamedFunction, KtCallExpression> {
-    it.isRunWithoutReturns() || return@process false
+fun KtNamedFunction.removeRunsWithoutReturns() =
+    process<KtNamedFunction, KtCallExpression> {
+        it.isRunWithoutReturns() || return@process false
 
-    val ktBlockExpression = runWriteAction { it.inlineRunWithoutReturns() } ?: return@process false
+        val ktBlockExpression = runWriteAction { it.inlineRunWithoutReturns() } ?: return@process false
 
-    ktBlockExpression.renameAllRedeclarations()
-}
+        ktBlockExpression.renameAllRedeclarations()
+    }
 
 fun KtCallExpression.inlineRunWithoutReturns(): KtBlockExpression? {
     when (val parent = parent) {
@@ -104,7 +107,7 @@ fun KtCallExpression.inlineRunWithoutReturns(): KtBlockExpression? {
 
             ktBlockExpression.addBefore(
                 ktPsiFactory.createProperty("val ${parent.name} = ${statements.last().text}"),
-                parent
+                parent,
             )
 
             parent.delete()
@@ -134,11 +137,12 @@ private fun KtNamedFunction.fixUselessElvisOperator() =
             .diagnostics
             .forElement(ktBinaryExpression)
             .firstOrNull {
-                it.factory in listOf(
-                    // TODO: This might not be needed
-                    Errors.USELESS_ELVIS,
-                    Errors.USELESS_ELVIS_RIGHT_IS_NULL
-                )
+                it.factory in
+                    listOf(
+                        // TODO: This might not be needed
+                        Errors.USELESS_ELVIS,
+                        Errors.USELESS_ELVIS_RIGHT_IS_NULL,
+                    )
             }
             ?: return@process false
 
@@ -178,67 +182,70 @@ private fun KtFunctionLiteral.renameIfItShadowsName(ktParameter: KtParameter): B
     return true
 }
 
-private fun KtNamedFunction.processLetBlocksBeforeReturns() = processNameReferenceExpressions {
-    val ktReturnExpression = it.getReturnExpressionWhichReturnsThis() ?: return@processNameReferenceExpressions false
-    val letKtProperty = it.getLetKtProperty() ?: return@processNameReferenceExpressions false
+private fun KtNamedFunction.processLetBlocksBeforeReturns() =
+    processNameReferenceExpressions {
+        val ktReturnExpression = it.getReturnExpressionWhichReturnsThis() ?: return@processNameReferenceExpressions false
+        val letKtProperty = it.getLetKtProperty() ?: return@processNameReferenceExpressions false
 
-    val nullableLetCall = letKtProperty.initializer.cast<KtQualifiedExpression>()
+        val nullableLetCall = letKtProperty.initializer.cast<KtQualifiedExpression>()
 
-    val ktFunctionLiteral = nullableLetCall.firstLambdaArgument()
+        val ktFunctionLiteral = nullableLetCall.firstLambdaArgument()
 
-    val ktParameter = ktFunctionLiteral.firstParameter()
+        val ktParameter = ktFunctionLiteral.firstParameter()
 
-    if (ktFunctionLiteral.renameIfItShadowsName(ktParameter)) {
-        return@processNameReferenceExpressions true
-    }
-
-    runWriteAction {
-        val ktPsiFactory = ktPsiFactory
-
-        val ktBlockExpression: KtBlockExpression = ktReturnExpression.parentOfType()!!
-
-        val letReceiverKtProperty = ktPsiFactory
-            .createExpressionByPattern(
-                "$0 ?: return${ktReturnExpression.labelString()} null",
-                nullableLetCall.receiverExpression
-            )
-            .introduceVariableInBlock(ktBlockExpression, ktReturnExpression)
-
-        ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), ktReturnExpression)
-
-        ktFunctionLiteral.processReturnExpressions {
-            it.replace(
-                ktPsiFactory.createExpressionByPattern(
-                    "return${ktReturnExpression.labelString()} $0",
-                    it.returnedExpression!!
-                )
-            )
+        if (ktFunctionLiteral.renameIfItShadowsName(ktParameter)) {
+            return@processNameReferenceExpressions true
         }
 
-        val destructuringDeclaration = ktFunctionLiteral.valueParameters[0].destructuringDeclaration
+        runWriteAction {
+            val ktPsiFactory = ktPsiFactory
 
-        if (destructuringDeclaration == null) {
-            letReceiverKtProperty.identifyingElement!!.replace(ktPsiFactory.createIdentifier(ktParameter.name!!))
-        } else {
-            ktPsiFactory
-                .createDestructuringDeclaration("val ${destructuringDeclaration.text} = ${letReceiverKtProperty.name}")
-                .addToBlock(ktBlockExpression, ktReturnExpression)
+            val ktBlockExpression: KtBlockExpression = ktReturnExpression.parentOfType()!!
+
+            val letReceiverKtProperty =
+                ktPsiFactory
+                    .createExpressionByPattern(
+                        "$0 ?: return${ktReturnExpression.labelString()} null",
+                        nullableLetCall.receiverExpression,
+                    )
+                    .introduceVariableInBlock(ktBlockExpression, ktReturnExpression)
+
             ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), ktReturnExpression)
+
+            ktFunctionLiteral.processReturnExpressions {
+                it.replace(
+                    ktPsiFactory.createExpressionByPattern(
+                        "return${ktReturnExpression.labelString()} $0",
+                        it.returnedExpression!!,
+                    ),
+                )
+            }
+
+            val destructuringDeclaration = ktFunctionLiteral.valueParameters[0].destructuringDeclaration
+
+            if (destructuringDeclaration == null) {
+                letReceiverKtProperty.identifyingElement!!.replace(ktPsiFactory.createIdentifier(ktParameter.name!!))
+            } else {
+                ktPsiFactory
+                    .createDestructuringDeclaration("val ${destructuringDeclaration.text} = ${letReceiverKtProperty.name}")
+                    .addToBlock(ktBlockExpression, ktReturnExpression)
+                ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), ktReturnExpression)
+            }
+
+            val statements =
+                ktFunctionLiteral
+                    .bodyExpression!!
+                    .statements
+
+            ktBlockExpression.addRangeBefore(statements.first(), statements.last(), ktReturnExpression)
+
+            letKtProperty.delete()
+
+            ktReturnExpression.delete()
+
+            true
         }
-
-        val statements = ktFunctionLiteral
-            .bodyExpression!!
-            .statements
-
-        ktBlockExpression.addRangeBefore(statements.first(), statements.last(), ktReturnExpression)
-
-        letKtProperty.delete()
-
-        ktReturnExpression.delete()
-
-        true
     }
-}
 
 fun KtFunctionLiteral.hasReturns(): Boolean {
     var hasReturns = false
@@ -262,78 +269,82 @@ private fun KtNameReferenceExpression.hasElvisParentWithNullEarlyReturn(): Boole
     return ktReturnExpression.returnedExpression?.text == "null"
 }
 
-private fun KtProperty.suggestNameByName(name: String): String = KotlinNameSuggester.suggestNameByName(
-    name,
-    NewDeclarationNameValidator(
-        container = getStrictParentOfType<KtDeclaration>()!!,
-        anchor = this,
-        target = NewDeclarationNameValidator.Target.VARIABLES
+private fun KtProperty.suggestNameByName(name: String): String =
+    KotlinNameSuggester.suggestNameByName(
+        name,
+        NewDeclarationNameValidator(
+            container = getStrictParentOfType<KtDeclaration>()!!,
+            anchor = this,
+            target = NewDeclarationNameValidator.Target.VARIABLES,
+        ),
     )
-)
 
-private fun KtNamedFunction.makeNullableLetReturnEarly() = processNameReferenceExpressions {
-    if (!it.hasElvisParentWithNullEarlyReturn()) return@processNameReferenceExpressions false
+private fun KtNamedFunction.makeNullableLetReturnEarly() =
+    processNameReferenceExpressions {
+        if (!it.hasElvisParentWithNullEarlyReturn()) return@processNameReferenceExpressions false
 
-    val letKtProperty = it.getLetKtProperty() ?: return@processNameReferenceExpressions false
+        val letKtProperty = it.getLetKtProperty() ?: return@processNameReferenceExpressions false
 
-    val nullableLetCall = letKtProperty.initializer.cast<KtQualifiedExpression>()
+        val nullableLetCall = letKtProperty.initializer.cast<KtQualifiedExpression>()
 
-    val ktFunctionLiteral = nullableLetCall.firstLambdaArgument()
+        val ktFunctionLiteral = nullableLetCall.firstLambdaArgument()
 
-    if (ktFunctionLiteral.hasReturns()) {
-        return@processNameReferenceExpressions false
-    }
-
-    var letReceiverKtProperty: KtProperty? = null
-
-    val ktPsiFactory = ktPsiFactory
-
-    val ktBlockExpression: KtBlockExpression = letKtProperty.parentOfType()!!
-
-    runWriteAction {
-        letReceiverKtProperty = ktPsiFactory
-            .createExpressionByPattern(
-                "$0 ?: return@mono null",
-                nullableLetCall.receiverExpression
-            )
-            .introduceVariableInBlock(ktBlockExpression, letKtProperty)
-
-        ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), letKtProperty)
-    }
-
-    val firstParameter = ktFunctionLiteral.firstParameter()
-    val firstParameterName = firstParameter.name!!
-
-    val capturedLetReceiverKtProperty = letReceiverKtProperty!!
-    firstParameter.rename(capturedLetReceiverKtProperty.name!!)
-
-    runWriteAction {
-        val statements = ktFunctionLiteral.bodyExpression!!.statements
-
-        if (statements.size >= 2) {
-            ktBlockExpression.addRangeBefore(statements.first(), statements[statements.size - 2], letKtProperty)
+        if (ktFunctionLiteral.hasReturns()) {
+            return@processNameReferenceExpressions false
         }
 
-        ktBlockExpression.addBefore(
-            ktPsiFactory.createProperty("val ${letKtProperty.name} = ${statements.last().text}"),
-            letKtProperty
-        )
+        var letReceiverKtProperty: KtProperty? = null
 
-        letKtProperty.delete()
+        val ktPsiFactory = ktPsiFactory
 
-        it.parent.cast<KtBinaryExpression>().replace(it)
+        val ktBlockExpression: KtBlockExpression = letKtProperty.parentOfType()!!
+
+        runWriteAction {
+            letReceiverKtProperty =
+                ktPsiFactory
+                    .createExpressionByPattern(
+                        "$0 ?: return@mono null",
+                        nullableLetCall.receiverExpression,
+                    )
+                    .introduceVariableInBlock(ktBlockExpression, letKtProperty)
+
+            ktBlockExpression.addBefore(ktPsiFactory.createNewLine(), letKtProperty)
+        }
+
+        val firstParameter = ktFunctionLiteral.firstParameter()
+        val firstParameterName = firstParameter.name!!
+
+        val capturedLetReceiverKtProperty = letReceiverKtProperty!!
+        firstParameter.rename(capturedLetReceiverKtProperty.name!!)
+
+        runWriteAction {
+            val statements = ktFunctionLiteral.bodyExpression!!.statements
+
+            if (statements.size >= 2) {
+                ktBlockExpression.addRangeBefore(statements.first(), statements[statements.size - 2], letKtProperty)
+            }
+
+            ktBlockExpression.addBefore(
+                ktPsiFactory.createProperty("val ${letKtProperty.name} = ${statements.last().text}"),
+                letKtProperty,
+            )
+
+            letKtProperty.delete()
+
+            it.parent.cast<KtBinaryExpression>().replace(it)
+        }
+
+        capturedLetReceiverKtProperty.rename(capturedLetReceiverKtProperty.suggestNameByName(firstParameterName))
+
+        true
     }
 
-    capturedLetReceiverKtProperty.rename(capturedLetReceiverKtProperty.suggestNameByName(firstParameterName))
-
-    true
-}
-
-private fun KtNamedFunction.inlineValuesWithOneUsage() = collectDescendantsOfType<KtProperty>().forEach {
-    if (ReferencesSearchScopeHelper.search(it).findAll().size == 1 && !it.hasAsyncInitializer()) {
-        KotlinInlinePropertyHandler(withPrompt = false).inlineElement(project, null, it)
+private fun KtNamedFunction.inlineValuesWithOneUsage() =
+    collectDescendantsOfType<KtProperty>().forEach {
+        if (ReferencesSearchScopeHelper.search(it).findAll().size == 1 && !it.hasAsyncInitializer()) {
+            KotlinInlinePropertyHandler(withPrompt = false).inlineElement(project, null, it)
+        }
     }
-}
 
 fun KtProperty.hasAsyncInitializer(): Boolean {
     val ktCallExpression = initializer.castSafelyTo<KtCallExpression>() ?: return false
