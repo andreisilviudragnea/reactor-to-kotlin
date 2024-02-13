@@ -17,7 +17,10 @@ import org.jetbrains.kotlin.utils.addToStdlib.cast
 
 // TODO: Fix signature clash with Flux.then()
 class MonoThenJustInspection : AbstractBaseJavaLocalInspectionTool() {
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
+    override fun buildVisitor(
+        holder: ProblemsHolder,
+        isOnTheFly: Boolean,
+    ): PsiElementVisitor {
         return object : JavaElementVisitor() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
                 val psiElement = expression.getThenJustArgument() ?: return
@@ -25,7 +28,7 @@ class MonoThenJustInspection : AbstractBaseJavaLocalInspectionTool() {
                     psiElement,
                     "Mono then just",
                     ProblemHighlightType.WARNING,
-                    Fix()
+                    Fix(),
                 )
             }
         }
@@ -34,7 +37,10 @@ class MonoThenJustInspection : AbstractBaseJavaLocalInspectionTool() {
     class Fix : LocalQuickFix {
         override fun getFamilyName() = "Mono then just"
 
-        override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
+        override fun applyFix(
+            project: Project,
+            descriptor: ProblemDescriptor,
+        ) {
             val callToJust = descriptor.psiElement.cast<PsiMethodCallExpression>()
             val callToThen = callToJust.parentOfType<PsiMethodCallExpression>()!!
             callToThen.replace(
@@ -42,8 +48,8 @@ class MonoThenJustInspection : AbstractBaseJavaLocalInspectionTool() {
                     .elementFactory
                     .createExpressionFromText(
                         "${callToThen.methodExpression.qualifierExpression!!.text}.thenReturn(${callToJust.firstArgument.text})",
-                        callToJust
-                    )
+                        callToJust,
+                    ),
             )
         }
     }

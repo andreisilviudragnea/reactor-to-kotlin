@@ -27,7 +27,7 @@ import org.jetbrains.kotlin.psi.namedFunctionVisitor
 class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection() {
     override fun buildVisitor(
         holder: ProblemsHolder,
-        isOnTheFly: Boolean
+        isOnTheFly: Boolean,
     ) = namedFunctionVisitor { ktNamedFunction ->
         ktNamedFunction.returnsMono() || return@namedFunctionVisitor
 
@@ -35,7 +35,7 @@ class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection(
             ktNamedFunction.nameIdentifier!!,
             "Function returns Mono",
             ProblemHighlightType.WARNING,
-            Fix()
+            Fix(),
         )
     }
 
@@ -44,19 +44,22 @@ class ExtractMonoReturningCallsToVariablesInspection : AbstractKotlinInspection(
 
         override fun getFamilyName() = "Process function"
 
-        override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
+        override fun applyFix(
+            project: Project,
+            descriptor: ProblemDescriptor,
+        ) {
             with(descriptor.psiElement.parentOfType<KtNamedFunction>()!!) {
                 runWriteAction {
                     ImportInsertHelperImpl.addImport(project, containingKtFile, FqName("kotlinx.coroutines.async"))
                     ImportInsertHelperImpl.addImport(
                         project,
                         containingKtFile,
-                        FqName("kotlinx.coroutines.reactive.awaitSingle")
+                        FqName("kotlinx.coroutines.reactive.awaitSingle"),
                     )
                     ImportInsertHelperImpl.addImport(
                         project,
                         containingKtFile,
-                        FqName("kotlinx.coroutines.reactive.awaitFirstOrNull")
+                        FqName("kotlinx.coroutines.reactive.awaitFirstOrNull"),
                     )
                     ImportInsertHelperImpl.addImport(project, containingKtFile, FqName("reactor.util.function.Tuples"))
 

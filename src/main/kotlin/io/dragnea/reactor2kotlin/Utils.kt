@@ -42,14 +42,16 @@ import org.jetbrains.kotlin.resolve.bindingContextUtil.getTargetFunction
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
 
-fun PsiMethod.returnsMono() = returnType
-    .castSafelyTo<PsiClassType>()
-    ?.resolve()
-    ?.qualifiedName == "reactor.core.publisher.Mono"
+fun PsiMethod.returnsMono() =
+    returnType
+        .castSafelyTo<PsiClassType>()
+        ?.resolve()
+        ?.qualifiedName == "reactor.core.publisher.Mono"
 
-fun KtNamedFunction.returnsMono() = toLightMethods()
-    .map { it.returnsMono() }
-    .all { it }
+fun KtNamedFunction.returnsMono() =
+    toLightMethods()
+        .map { it.returnsMono() }
+        .all { it }
 
 fun KtNamedFunction.extractPublisherReturningCallsToMethods() {
     var collectCallExpressions = collectCallExpressions()
@@ -74,10 +76,11 @@ private fun KtNamedFunction.collectCallExpressions(): List<KtExpression> {
                 .analyze()
                 .getType(it)
                 ?.fqName
-                .toString() in listOf(
-                "reactor.core.publisher.Mono",
-                "reactor.core.publisher.Flux"
-            )
+                .toString() in
+                listOf(
+                    "reactor.core.publisher.Mono",
+                    "reactor.core.publisher.Flux",
+                )
         }
         .toList()
 }
@@ -96,8 +99,9 @@ fun PsiMethodCallExpression.getNotDeferredArgument(): PsiExpression? {
         }
         is PsiReferenceExpression -> {
             val psiLocalVariable = firstArgument.resolve().castSafelyTo<PsiLocalVariable>() ?: return null
-            val psiMethodCallExpression = psiLocalVariable.initializer.castSafelyTo<PsiMethodCallExpression>()
-                ?: return null
+            val psiMethodCallExpression =
+                psiLocalVariable.initializer.castSafelyTo<PsiMethodCallExpression>()
+                    ?: return null
             return psiMethodCallExpression.getCallIfNotDefer()
         }
         else -> return null
@@ -120,7 +124,12 @@ fun PsiMethodCallExpression.getThenJustArgument(): PsiExpression? {
 }
 
 private fun PsiMethodCallExpression.getCallIfNotDefer(): PsiExpression? {
-    if (isCallTo("public static <T> reactor.core.publisher.Mono<T> defer(java.util.function.Supplier<? extends reactor.core.publisher.Mono<? extends T>> supplier) { return null; }")) {
+    if (isCallTo(
+            "public static <T> reactor.core.publisher.Mono<T> " +
+                "defer(java.util.function.Supplier<? extends " +
+                "reactor.core.publisher.Mono<? extends T>> supplier) { return null; }",
+        )
+    ) {
         return null
     }
     return this
@@ -133,7 +142,10 @@ inline fun <S : PsiElement, reified T : PsiElement> S.process(block: S.(T) -> Bo
     }
 }
 
-inline fun <S, T> S.processedAtLeastOnce(ts: List<T>, block: S.(T) -> Boolean): Boolean {
+inline fun <S, T> S.processedAtLeastOnce(
+    ts: List<T>,
+    block: S.(T) -> Boolean,
+): Boolean {
     ts.forEach { t ->
         if (block(t)) {
             return true
@@ -142,8 +154,7 @@ inline fun <S, T> S.processedAtLeastOnce(ts: List<T>, block: S.(T) -> Boolean): 
     return false
 }
 
-fun KtNamedFunction.processNameReferenceExpressions(block: KtNamedFunction.(KtNameReferenceExpression) -> Boolean) =
-    process(block)
+fun KtNamedFunction.processNameReferenceExpressions(block: KtNamedFunction.(KtNameReferenceExpression) -> Boolean) = process(block)
 
 fun KtExpression.introduceVariable(): KtProperty {
     var ktProperty: KtProperty? = null
@@ -155,7 +166,7 @@ fun KtExpression.introduceVariable(): KtProperty {
         null,
         this,
         false,
-        listOf(this)
+        listOf(this),
     ) {
         ktProperty = it.cast()
 
@@ -167,31 +178,40 @@ fun KtExpression.introduceVariable(): KtProperty {
     return ktProperty!!
 }
 
-inline fun <reified T : PsiElement> T.addToBlock(block: KtBlockExpression, anchor: PsiElement): T =
-    block.addBefore(this, anchor).cast()
+inline fun <reified T : PsiElement> T.addToBlock(
+    block: KtBlockExpression,
+    anchor: PsiElement,
+): T = block.addBefore(this, anchor).cast()
 
-fun KtExpression.introduceVariableInBlock(block: KtBlockExpression, anchor: PsiElement): KtProperty {
+fun KtExpression.introduceVariableInBlock(
+    block: KtBlockExpression,
+    anchor: PsiElement,
+): KtProperty {
     return addToBlock(block, anchor).introduceVariable()
 }
 
-fun KtProperty.receiverNameReferenceExpression(): KtNameReferenceExpression = initializer
-    .cast<KtDotQualifiedExpression>()
-    .receiverExpression
-    .cast()
+fun KtProperty.receiverNameReferenceExpression(): KtNameReferenceExpression =
+    initializer
+        .cast<KtDotQualifiedExpression>()
+        .receiverExpression
+        .cast()
 
-fun KtQualifiedExpression.firstLambdaArgument(): KtFunctionLiteral = this
-    .selectorExpression
-    .cast<KtCallExpression>()
-    .firstLambdaArgument()
+fun KtQualifiedExpression.firstLambdaArgument(): KtFunctionLiteral =
+    this
+        .selectorExpression
+        .cast<KtCallExpression>()
+        .firstLambdaArgument()
 
-fun KtCallExpression.firstLambdaArgument(): KtFunctionLiteral = valueArguments
-    .map { it.getArgumentExpression() }
-    .firstIsInstance<KtLambdaExpression>()
-    .functionLiteral
+fun KtCallExpression.firstLambdaArgument(): KtFunctionLiteral =
+    valueArguments
+        .map { it.getArgumentExpression() }
+        .firstIsInstance<KtLambdaExpression>()
+        .functionLiteral
 
-fun KtProperty.ktFunctionLiteral(): KtFunctionLiteral = initializer
-    .cast<KtQualifiedExpression>()
-    .firstLambdaArgument()
+fun KtProperty.ktFunctionLiteral(): KtFunctionLiteral =
+    initializer
+        .cast<KtQualifiedExpression>()
+        .firstLambdaArgument()
 
 fun KtFunction.processReturnExpressions(block: (KtReturnExpression) -> Unit) {
     val bindingContext = analyze()
@@ -242,10 +262,11 @@ fun KtBinaryExpression.isElvis() = operationToken == KtTokens.ELVIS
 fun KtFunctionLiteral.firstParameter(): KtParameter = valueParameters[0]
 
 fun KtExpression.isCallTo(name: String): Boolean {
-    val ktNamedFunction = this
-        .referenceExpression()!!
-        .resolve()
-        .castSafelyTo<KtNamedFunction>() ?: return false
+    val ktNamedFunction =
+        this
+            .referenceExpression()!!
+            .resolve()
+            .castSafelyTo<KtNamedFunction>() ?: return false
 
     return ktNamedFunction.name == name
 }

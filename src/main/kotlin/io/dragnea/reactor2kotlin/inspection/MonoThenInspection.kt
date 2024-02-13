@@ -15,7 +15,10 @@ import io.dragnea.reactor2kotlin.getNotDeferredArgument
 import org.jetbrains.kotlin.utils.addToStdlib.cast
 
 class MonoThenInspection : AbstractBaseJavaLocalInspectionTool() {
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
+    override fun buildVisitor(
+        holder: ProblemsHolder,
+        isOnTheFly: Boolean,
+    ): PsiElementVisitor {
         return object : JavaElementVisitor() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
                 val psiElement = expression.getNotDeferredArgument() ?: return
@@ -23,7 +26,7 @@ class MonoThenInspection : AbstractBaseJavaLocalInspectionTool() {
                     psiElement,
                     "Mono then",
                     ProblemHighlightType.WARNING,
-                    Fix()
+                    Fix(),
                 )
             }
         }
@@ -32,13 +35,17 @@ class MonoThenInspection : AbstractBaseJavaLocalInspectionTool() {
     class Fix : LocalQuickFix {
         override fun getFamilyName() = "Mono then"
 
-        override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
+        override fun applyFix(
+            project: Project,
+            descriptor: ProblemDescriptor,
+        ) {
             val psiExpression = descriptor.psiElement.cast<PsiExpression>()
 
-            val createExpressionFromText = psiExpression.elementFactory.createExpressionFromText(
-                "reactor.core.publisher.Mono.defer(() -> ${psiExpression.text})",
-                psiExpression
-            )
+            val createExpressionFromText =
+                psiExpression.elementFactory.createExpressionFromText(
+                    "reactor.core.publisher.Mono.defer(() -> ${psiExpression.text})",
+                    psiExpression,
+                )
 
             psiExpression.replace(createExpressionFromText)
         }

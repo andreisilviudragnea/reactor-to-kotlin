@@ -13,8 +13,8 @@ intellij {
     plugins.set(
         listOf(
             "java",
-            "org.jetbrains.kotlin:213-1.6.10-release-923-IJ5744.223"
-        )
+            "org.jetbrains.kotlin:213-1.6.10-release-923-IJ5744.223",
+        ),
     )
 
     updateSinceUntilBuild.set(false)

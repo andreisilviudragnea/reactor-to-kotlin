@@ -35,14 +35,16 @@ private fun KtProperty.isExactCopy(): Boolean {
 
         val containingDeclaration = getStrictParentOfType<KtDeclaration>()
         if (containingDeclaration != null) {
-            val validator = NewDeclarationNameValidator(
-                container = containingDeclaration,
-                anchor = this,
-                target = NewDeclarationNameValidator.Target.VARIABLES,
-                excludedDeclarations = listOfNotNull(
-                    DescriptorToSourceUtils.descriptorToDeclaration(initializerDescriptor) as? KtDeclaration
+            val validator =
+                NewDeclarationNameValidator(
+                    container = containingDeclaration,
+                    anchor = this,
+                    target = NewDeclarationNameValidator.Target.VARIABLES,
+                    excludedDeclarations =
+                        listOfNotNull(
+                            DescriptorToSourceUtils.descriptorToDeclaration(initializerDescriptor) as? KtDeclaration,
+                        ),
                 )
-            )
             if (!validator(copyName)) return false
         }
         return true
@@ -50,11 +52,12 @@ private fun KtProperty.isExactCopy(): Boolean {
     return false
 }
 
-fun KtNamedFunction.inlineExactCopiesOfVariables() = process<KtNamedFunction, KtProperty> {
-    if (!it.isExactCopy()) {
-        return@process false
-    }
+fun KtNamedFunction.inlineExactCopiesOfVariables() =
+    process<KtNamedFunction, KtProperty> {
+        if (!it.isExactCopy()) {
+            return@process false
+        }
 
-    KotlinInlinePropertyHandler(withPrompt = false).inlineElement(project, null, it)
-    true
-}
+        KotlinInlinePropertyHandler(withPrompt = false).inlineElement(project, null, it)
+        true
+    }
